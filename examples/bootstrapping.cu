@@ -32,7 +32,7 @@ int main()
   long loge = 10;
 
   long logn = 13; // 14 -> 13
-  long sparse_slots = 1 << (1 + logn);
+  size_t sparse_slot_count = 1 << (1 + logn);
 
   int logp = 46;
   int logq = 51;
@@ -94,9 +94,6 @@ int main()
   bootstrapper.prepare_mod_polynomial();
 
   std::cout << "Adding Bootstrapping Keys..." << endl;
-  vector<int> gal_steps_vector;
-  gal_steps_vector.push_back(0);
-  PhantomGaloisKey galois_keys;
   vector<int> gal_steps_vector;
   gal_steps_vector.push_back(0);
   for (int i = 0; i < logN - 1; i++)
@@ -173,7 +170,7 @@ int main()
     }
     avg_err += curr_err;
     // cout << "(" << i << ", " << after[i] - testing(input[i]) << "), ";
-    //cout << "(" << after[i] << ", " << testing(input[i]) << "), ";
+    // cout << "(" << after[i] << ", " << testing(input[i]) << "), ";
     cout << "(" << input[i] << ", " << after[i] << "), ";
   }
   cout << endl;
