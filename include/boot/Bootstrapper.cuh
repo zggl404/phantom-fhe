@@ -194,4 +194,26 @@ class Bootstrapper {
 
   void bootstrap_hoisting(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
   void bootstrap_inplace_hoisting(PhantomCiphertext &cipher);
+
+
+    // add slim BTS
+	void slim_modraise_inplace(PhantomCiphertext &cipher);
+	void slim_sfl_full_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_sflinv_full_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_sflinv_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+
+	void ScaleDown(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_bootstrap_inplace(PhantomCiphertext &cipher);
+	void slim_bootstrap(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+
+	void slim_coefftoslot_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_slottocoeff_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_slottocoeff(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_coefftoslot(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+
+	void btsDebugPrint(PhantomCiphertext rtncipher, string str);
+	void print_vector(std::vector<double> vec, std::size_t print_size, int prec);
 };

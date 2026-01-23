@@ -1,5 +1,10 @@
 #include "boot/ModularReducer.cuh"
 
+
+double scale_for_boost_relu_range = 2.0;
+double dyn_scale_for_turn_back_q = std::pow(2.0, 46) / 69834700000000.0 / scale_for_boost_relu_range; // for cnn first boot (magic num, to check again)
+bool after_cnn_first_boot = false;
+
 ModularReducer::ModularReducer(long _boundary_K, double _log_width, long _deg, long _num_double_formula, long _inverse_deg,
                                CKKSEvaluator *_ckks) : boundary_K(_boundary_K), log_width(_log_width), deg(_deg), num_double_formula(_num_double_formula), inverse_deg(_inverse_deg), ckks(_ckks) {
   inverse_log_width = -log2(sin(2 * M_PI * pow(2.0, -log_width)));

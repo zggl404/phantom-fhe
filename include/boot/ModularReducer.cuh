@@ -42,3 +42,8 @@ class ModularReducer {
   void write_polynomials();
   void modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext &cipher);
 };
+
+static double scale_for_eval = 4.0 * 0.9; // tuning
+extern double scale_for_boost_relu_range;
+extern double dyn_scale_for_turn_back_q;
+extern bool after_cnn_first_boot;
