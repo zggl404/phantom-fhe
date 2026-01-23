@@ -4106,11 +4106,10 @@ void Bootstrapper::slim_sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &c
     {
       e *= 2.0; // magic num, to check again
       e *= scale_for_eval;
-      e *= scale_for_boost_relu_range;
     }
   }
 
-  rotated_bsgs_linear_transform(rtncipher, tmpct2, totlen3, basicstep3, logn + 1, fftcoeff3_scale);
+  bsgs_linear_transform(rtncipher, tmpct2, totlen3, basicstep3, logn + 1, fftcoeff3_scale);
   ckks->evaluator.rescale_to_next_inplace(rtncipher);
 }
 
@@ -4246,8 +4245,7 @@ void Bootstrapper::slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, Phantom
   cout << "scale = " << setprecision(20) << real_part.scale() << endl;
 
   rtncipher = real_part;
-  // rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
-  rtncipher.scale() = pow(2.0, 46);
+  rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
   cout << "scale = " << setprecision(20) << rtncipher.scale() << endl;
 }
 

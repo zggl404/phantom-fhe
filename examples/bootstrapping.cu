@@ -34,7 +34,7 @@ int main()
   long logn = 13; // 14 -> 13
   size_t sparse_slot_count = 1 << (1 + logn);
 
-  int logp = 46;
+  int logp = 47;
   int logq = 51;
   int log_special_prime = 51;
 
@@ -116,7 +116,7 @@ int main()
 
   for (int i = 0; i < sparse_slot_count; i++)
   {
-    input[i] = -0.05 + (0.05 - -0.05) * i / sparse_slot_count;
+    input[i] = -1 + (1. - -1) * i / sparse_slot_count;
   }
   input.resize(1 << (logN - 1));
   for (int i = sparse_slot_count; i < input.size(); i++)
