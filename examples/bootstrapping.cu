@@ -25,14 +25,14 @@ int main()
   long boundary_K = 25;
   long deg = 59;
   long scale_factor = 2;
-  long inverse_deg = 1;
+  long inverse_deg = 127;
 
   // The following parameters have been adjusted to satisfy the memory constraints of an H800 GPU
   long logN = 16; // 16 -> 15
   long loge = 10;
 
-  long logn = 15; // 14 -> 13
-  long sparse_slots = (1 << logn);
+  long logn = 13; // 14 -> 13
+  long sparse_slots = 1 << (1 + logn);
 
   int logp = 46;
   int logq = 51;
@@ -40,8 +40,11 @@ int main()
 
   int secret_key_hamming_weight = 192;
 
-  int remaining_level = 16;
-  int boot_level = 14; // >= subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  int remaining_level = 3; // s2c
+  int boot_level = 3       // c2s
+                   + 6 + 2 // sin & double angle => sin(2*pi*x)
+                   + 1     // one more double angle => cos(4*pi*x)
+                   + 7;    // arcsin / 2 / pi (?)
   int total_level = remaining_level + boot_level;
 
   vector<int> coeff_bit_vec;
@@ -55,7 +58,6 @@ int main()
     coeff_bit_vec.push_back(logq);
   }
   coeff_bit_vec.push_back(log_special_prime);
-  
 
   std::cout << "Setting Parameters..." << endl;
   phantom::EncryptionParameters parms(scheme_type::ckks);
@@ -71,12 +73,10 @@ int main()
   PhantomSecretKey secret_key(context);
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
-  PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
+  PhantomGaloisKey galois_keys;
   PhantomCKKSEncoder encoder(context);
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, scale);
-
-  size_t slot_count = encoder.slot_count();
 
   Bootstrapper bootstrapper(
       loge,
@@ -96,32 +96,42 @@ int main()
   std::cout << "Adding Bootstrapping Keys..." << endl;
   vector<int> gal_steps_vector;
   gal_steps_vector.push_back(0);
+  PhantomGaloisKey galois_keys;
+  vector<int> gal_steps_vector;
+  gal_steps_vector.push_back(0);
+  for (int i = 0; i < logN - 1; i++)
+  {
+    gal_steps_vector.push_back((1 << i));
+  }
+  bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
+  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
   bootstrapper.slot_vec.push_back(logn);
 
   std::cout << "Generating Linear Transformation Coefficients..." << endl;
   bootstrapper.generate_LT_coefficient_3();
 
-  vector<double> sparse(sparse_slots, 0.0);
-  vector<double> input(slot_count, 0.0);
-  vector<double> before(slot_count, 0.0);
-  vector<double> after(slot_count, 0.0);
-
-  random_real(sparse, sparse_slots);
+  vector<double> input(1 << (logN - 1));
+  vector<double> before(1 << (logN - 1));
+  vector<double> after(1 << (logN - 1));
 
   PhantomPlaintext plain;
   PhantomCiphertext cipher;
 
-  // Create input cipher
-  for (size_t i = 0; i < slot_count; i++)
+  for (int i = 0; i < sparse_slot_count; i++)
   {
-    input[i] = sparse[i % sparse_slots];
+    input[i] = -0.05 + (0.05 - -0.05) * i / sparse_slot_count;
+  }
+  input.resize(1 << (logN - 1));
+  for (int i = sparse_slot_count; i < input.size(); i++)
+  {
+    input[i] = input[i % sparse_slot_count];
   }
 
   ckks_evaluator.encoder.encode(input, scale, plain);
   ckks_evaluator.encryptor.encrypt(plain, cipher);
 
   // Mod switch to the lowest level
-  for (int i = 0; i < total_level-3; i++)
+  for (int i = 0; i < total_level - 3; i++)
   {
     ckks_evaluator.evaluator.mod_switch_to_next_inplace(cipher);
   }
@@ -142,12 +152,34 @@ int main()
   ckks_evaluator.decryptor.decrypt(rtn, plain);
   ckks_evaluator.encoder.decode(plain, after);
 
-  double mean_err = 0;
-  for (long i = 0; i < sparse_slots; i++)
+  double max_err = 0;
+  double avg_err = 0;
+  double ignore_eps = 0.01;
+  auto relu = [](auto x)
+  { return (x >= 0.0) ? x : 0.0; };
+  auto v_shape = [](auto x)
+  { return abs(x); };
+  auto id = [](auto x)
+  { return x; };
+  auto &testing(relu);
+  for (size_t i = 0; i < sparse_slot_count; i++)
   {
-    if (i < 10) std::cout << before[i] << " <----> " << after[i] << endl;
-    mean_err += abs(before[i] - after[i]);
+
+    auto curr_err = abs(testing(input[i]) - after[i]);
+
+    if (abs((double)i - (double)sparse_slot_count / 2) / ((double)sparse_slot_count / 2) >= ignore_eps)
+    {
+      max_err = max(max_err, curr_err);
+    }
+    avg_err += curr_err;
+    // cout << "(" << i << ", " << after[i] - testing(input[i]) << "), ";
+    //cout << "(" << after[i] << ", " << testing(input[i]) << "), ";
+    cout << "(" << input[i] << ", " << after[i] << "), ";
   }
-  mean_err /= sparse_slots;
-  std::cout << "Mean absolute error: " << mean_err << endl;
+  cout << endl;
+  cout << "max error: " << max_err << " (2^" << log2(max_err) << ")" << endl;
+  avg_err /= sparse_slot_count;
+  cout << "avg error: " << avg_err << " (2^" << log2(avg_err) << ")" << endl;
+
+  return 0;
 }
