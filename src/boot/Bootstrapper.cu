@@ -4104,6 +4104,7 @@ void Bootstrapper::slim_sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &c
   {
     for (auto &e : v)
     {
+      e *= 2.0; // magic num, to check again
       e *= scale_for_eval;
       e *= scale_for_boost_relu_range;
     }
