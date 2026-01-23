@@ -386,7 +386,7 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
   
   const auto &context_data = ckks->context->get_context_data(sin_rtn.params_id());
   const auto &modulus = context_data.parms().coeff_modulus();
-  int64_t ql = modulus[0].value();
+  int64_t ql = (*modulus.rbegin()).value();
   ckks->evaluator.multiply_const_inplace(sin_rtn, cos_rtn.scale() * ql / sin_rtn.scale() / sin_rtn.scale());
   ckks->evaluator.rescale_to_next_inplace(sin_rtn);
   sin_rtn.scale() = cos_rtn.scale();
