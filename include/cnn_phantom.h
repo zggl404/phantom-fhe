@@ -79,7 +79,7 @@ void MultipleAdd_SEAL(CKKSEvaluator &ckksevaluator, PhantomCiphertext &cipher, P
 void test_evaluation(CKKSEvaluator &ckksevaluator, const PhantomCiphertext &cipher_in, PhantomCiphertext &cipher_out);
 void geneT0T1(CKKSEvaluator &ckksevaluator, PhantomCiphertext &T0, PhantomCiphertext &T1, PhantomCiphertext &cipher);
 void evalT(CKKSEvaluator &ckksevaluator, PhantomCiphertext &Tmplusn, const PhantomCiphertext &Tm, const PhantomCiphertext &Tn, const PhantomCiphertext &Tmminusn);
-void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &res, PhantomCiphertext &cipher, long deg, const vector<double> &decomp_coeff, Tree &tree);
+void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &res, PhantomCiphertext &cipher, long deg, const vector<RR> &decomp_coeff, Tree &tree);
 long coeff_number(long deg, Tree &tree);
 void coeff_change(long comp_no, long deg[], double *coeff[], long type[], vector<Tree> &tree);
 long ShowFailure_ReLU(CKKSEvaluator &ckksevaluator, PhantomCiphertext &cipher, vector<double> &x, long precision, long n);
@@ -97,3 +97,6 @@ void import_parameters_cifar100(vector<double> &linear_weight, vector<double> &l
 // cifar10, cifar100 integrated
 void ResNet_cifar10_seal_sparse(size_t layer_num, size_t start_image_id, size_t end_image_id);
 void ResNet_cifar100_seal_sparse(size_t layer_num, size_t start_image_id, size_t end_image_id);
+
+void upgrade_oddbaby(long n, Tree& tree);
+void upgrade_baby(long n, Tree& tree);

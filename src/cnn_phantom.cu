@@ -122,19 +122,19 @@ void multiplexed_parallel_convolution_print(const TensorCipher &cnn_in, TensorCi
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	// output << "convolution " << stage << " result" << endl;
 	auto decry_and_print_temp = cnn_out.cipher();
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
-	
-	// noprintf _t _h _c _w _t _p 
-	//cnn_out.print_parms();
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	// noprintf _t _h _c _w _t _p
+	// cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// cout << "scale: " << cnn_out.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// output << "scale: " << cnn_out.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  cout << "scale: " << cnn_out.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  output << "scale: " << cnn_out.cipher().scale() << endl
+	//  	   << endl;
 }
 void multiplexed_parallel_batch_norm_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, vector<double> bias, vector<double> running_mean, vector<double> running_var, vector<double> weight, double epsilon, CKKSEvaluator &ckksevaluator, double B, ofstream &output, size_t stage, bool end)
 {
@@ -154,19 +154,19 @@ void multiplexed_parallel_batch_norm_phantom_print(const TensorCipher &cnn_in, T
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	// output << "batch normalization " << stage << " result" << endl;
 	auto decry_and_print_temp = cnn_out.cipher();
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p 
-	//cnn_out.print_parms();
+	// noprintf _t _h _c _w _t _p
+	// cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// cout << "scale: " << cnn_out.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << cnn_out.cipher().chain_index()<< endl;
-	// output << "scale: " << cnn_out.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  cout << "scale: " << cnn_out.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << cnn_out.cipher().chain_index()<< endl;
+	//  output << "scale: " << cnn_out.cipher().scale() << endl
+	//  	   << endl;
 }
 void approx_ReLU_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, long comp_no, vector<int> deg, long alpha, vector<Tree> &tree, double scaled_val, long scalingfactor, CKKSEvaluator &ckksevaluator, double B, ofstream &output, size_t stage)
 {
@@ -181,30 +181,31 @@ void approx_ReLU_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out
 	time_end = chrono::high_resolution_clock::now();
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
 	cout << "Approx ReLU time : " << time_diff.count() / 1000 << " ms" << endl;
-	cout << "---------------------------------------------------------" << endl; 
+	cout << "---------------------------------------------------------" << endl;
 	// cout << "ReLU function " << stage << " result" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	// output << "ReLU function " << stage << " result" << endl;
 	auto decry_and_print_temp = cnn_out.cipher();
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p 
-	//cnn_out.print_parms();
+	// noprintf _t _h _c _w _t _p
+	// cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// cout << "scale: " << cnn_out.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// output << "scale: " << cnn_out.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  cout << "scale: " << cnn_out.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  output << "scale: " << cnn_out.cipher().scale() << endl
+	//  	   << endl;
 
 	// cout << "intermediate decrypted values: " << endl;
-	output << "intermediate decrypted values: " << endl <<endl;
+	output << "intermediate decrypted values: " << endl
+		   << endl;
 	decry_and_print_temp = cnn_out.cipher();
-	//printf decrypt result and print
-	// decrypt_and_print_txt(decry_and_print_temp, ckksevaluator, 1 << logn, 4, 1, output); // cnn_out.print_parms();
+	// printf decrypt result and print
+	//  decrypt_and_print_txt(decry_and_print_temp, ckksevaluator, 1 << logn, 4, 1, output); // cnn_out.print_parms();
 }
 void bootstrap_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, Bootstrapper &bootstrapper, CKKSEvaluator &ckksevaluator, ofstream &output, size_t stage)
 {
@@ -218,7 +219,7 @@ void bootstrap_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, Bootstra
 	ctxt = cnn_in.cipher();
 	time_start = chrono::high_resolution_clock::now();
 	// bootstrapper.bootstrap_3(rtn, ctxt);
-	ckksevaluator.evaluator.mod_switch_to_inplace(ctxt, bootstrapper.L+1);
+	ckksevaluator.evaluator.mod_switch_to_inplace(ctxt, bootstrapper.L + 1);
 	bootstrapper.bootstrap_real_3(rtn, ctxt);
 	time_end = chrono::high_resolution_clock::now();
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
@@ -228,21 +229,20 @@ void bootstrap_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, Bootstra
 	// cout << "bootstrapping " << stage << " result" << endl;
 	// output << "bootstrapping " << stage << " result" << endl;
 	auto decry_and_print_temp = cnn_out.cipher();
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p 
+	// noprintf _t _h _c _w _t _p
 	// cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// cout << "scale: " << cnn_out.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// output << "scale: " << cnn_out.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  cout << "scale: " << cnn_out.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  output << "scale: " << cnn_out.cipher().scale() << endl
+	//  	   << endl;
 }
-
 
 void multiplexed_parallel_downsampling_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, CKKSEvaluator &ckksevaluator, ofstream &output)
 {
@@ -259,19 +259,19 @@ void multiplexed_parallel_downsampling_phantom_print(const TensorCipher &cnn_in,
 	cout << "Multiplexed Parallel Downsampling time : " << time_diff.count() / 1000 << " ms" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	auto decry_and_print_temp = cnn_out.cipher();
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p 
+	// noprintf _t _h _c _w _t _p
 	// cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// cout << "scale: " << cnn_out.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// output << "scale: " << cnn_out.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  cout << "scale: " << cnn_out.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  output << "scale: " << cnn_out.cipher().scale() << endl
+	//  	   << endl;
 }
 void averagepooling_phantom_scale_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, CKKSEvaluator &ckksevaluator, double B, ofstream &output)
 {
@@ -289,19 +289,19 @@ void averagepooling_phantom_scale_print(const TensorCipher &cnn_in, TensorCipher
 	cout << "Averagepooling Phantom Scale Time : " << time_diff.count() / 1000 << " ms" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	auto decry_and_print_temp = cnn_out.cipher();
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p 
-	//cnn_out.print_parms();
+	// noprintf _t _h _c _w _t _p
+	// cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// cout << "scale: " << cnn_out.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << cnn_out.cipher().chain_index()<< endl;
-	// output << "scale: " << cnn_out.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  cout << "scale: " << cnn_out.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << cnn_out.cipher().chain_index()<< endl;
+	//  output << "scale: " << cnn_out.cipher().scale() << endl
+	//  	   << endl;
 }
 void fully_connected_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, vector<double> matrix, vector<double> bias, int q, int r, CKKSEvaluator &ckksevaluator, ofstream &output)
 {
@@ -312,25 +312,25 @@ void fully_connected_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn
 	chrono::microseconds time_diff;
 
 	time_start = chrono::high_resolution_clock::now();
-	matrix_multiplication_phantom(cnn_in, cnn_out, matrix, bias, q, r,ckksevaluator);
+	matrix_multiplication_phantom(cnn_in, cnn_out, matrix, bias, q, r, ckksevaluator);
 	time_end = chrono::high_resolution_clock::now();
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
-    cout << "Fully Connected time : " << time_diff.count() / 1000 << " ms" << endl;
+	cout << "Fully Connected time : " << time_diff.count() / 1000 << " ms" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	auto decry_and_print_temp = cnn_out.cipher();
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p 
+	// noprintf _t _h _c _w _t _p
 	// cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// cout << "scale: " << cnn_out.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	// output << "scale: " << cnn_out.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  cout << "scale: " << cnn_out.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	//  output << "scale: " << cnn_out.cipher().scale() << endl
+	//  	   << endl;
 }
 // void multiplexed_parallel_convolution_phantom(const TensorCipher &cnn_in, TensorCipher &cnn_out, int co, int st, int fh, int fw, const vector<double> &data, vector<double> running_var, vector<double> constant_weight, double epsilon, CKKSEncoder &encoder, Encryptor &encryptor, Evaluator &evaluator, GaloisKeys &gal_keys, vector<PhantomCiphertext> &cipher_pool, bool end)
 void multiplexed_parallel_convolution_phantom(const TensorCipher &cnn_in, TensorCipher &cnn_out, int co, int st, int fh, int fw, const vector<double> &data, vector<double> running_var, vector<double> constant_weight, double epsilon, CKKSEvaluator &ckksevaluator, vector<PhantomCiphertext> &cipher_pool, bool end)
@@ -681,20 +681,20 @@ void cipher_add_phantom_print(const TensorCipher &cnn1, const TensorCipher &cnn2
 	cnn_add_phantom(cnn1, cnn2, destination, ckksevaluator);
 	// cout << "cipher add result" << endl;
 	auto decry_and_print_temp = destination.cipher();
-	//noprintf decrypt print
-	//decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	// noprintf decrypt print
+	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p 
-	//destination.print_parms();
+	// noprintf _t _h _c _w _t _p
+	// destination.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	//noprintf remain and level scale
-	// cout << "remaining level : " << destination.cipher().chain_index() << endl;
-	// cout << "scale: " << destination.cipher().scale() << endl
-	// 	 << endl;
-	// output << "remaining level : " << destination.cipher().chain_index() << endl;
-	// output << "scale: " << destination.cipher().scale() << endl
-	// 	   << endl;
+	// noprintf remain and level scale
+	//  cout << "remaining level : " << destination.cipher().chain_index() << endl;
+	//  cout << "scale: " << destination.cipher().scale() << endl
+	//  	 << endl;
+	//  output << "remaining level : " << destination.cipher().chain_index() << endl;
+	//  output << "scale: " << destination.cipher().scale() << endl
+	//  	   << endl;
 }
 
 void cnn_add_phantom(const TensorCipher &cnn1, const TensorCipher &cnn2, TensorCipher &destination, CKKSEvaluator &ckksevaluator)
@@ -838,17 +838,17 @@ void averagepooling_phantom_scale(const TensorCipher &cnn_in, TensorCipher &cnn_
 			int p = ki * u + s;
 			temp = ct;
 			//	scale_evaluator.rotate_vector_inplace(temp, -p*k + k*k*l*l*u + k*l*s, gal_keys);
-			memory_save_rotate(temp, temp, -p * ki + ki * ki * hi * wi * u + ki * wi * s,ckksevaluator);
+			memory_save_rotate(temp, temp, -p * ki + ki * ki * hi * wi * u + ki * wi * s, ckksevaluator);
 			select_one = zero;
 			// for(int i=0; i<k; i++) select_one[(k*u+s)*k+i] = 1.0 / static_cast<double>(l*l);
 			for (int i = 0; i < ki; i++)
 				select_one[(ki * u + s) * ki + i] = B / static_cast<double>(hi * wi);
 
-				ckksevaluator.evaluator.multiply_vector_inplace_reduced_error(temp, select_one);
+			ckksevaluator.evaluator.multiply_vector_inplace_reduced_error(temp, select_one);
 			if (u == 0 && s == 0)
 				sum = temp; // double scaling factor
 			else
-			ckksevaluator.evaluator.add_inplace_reduced_error(sum, temp);
+				ckksevaluator.evaluator.add_inplace_reduced_error(sum, temp);
 		}
 
 		// cout << "final iteration results" << endl;
@@ -904,7 +904,7 @@ void matrix_multiplication_phantom(const TensorCipher &cnn_in, TensorCipher &cnn
 		if (s == 0)
 			sum = temp;
 		else
-		ckksevaluator.evaluator.add_inplace_reduced_error(sum, temp);
+			ckksevaluator.evaluator.add_inplace_reduced_error(sum, temp);
 	}
 	ckksevaluator.evaluator.rescale_to_next_inplace(sum);
 
@@ -913,10 +913,11 @@ void matrix_multiplication_phantom(const TensorCipher &cnn_in, TensorCipher &cnn
 void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree> &tree, double scaled_val, long scalingfactor, CKKSEvaluator &ckksevaluator, PhantomCiphertext &cipher_in, PhantomCiphertext &cipher_res)
 {
 	// variables
-	vector<vector<double>> decomp_coeff(comp_no, vector<double>(0));
+	vector<vector<RR>> decomp_coeff(comp_no, vector<RR>(0));
 	vector<double> scale_val(comp_no, 0.0);
 	PhantomPlaintext plain_half;
 	PhantomCiphertext cipher_temp, cipher_half, cipher_x;
+	auto to_rr = [](double value) { return NTL::to_RR(value); };
 
 	// ifstream and scale
 	string str;
@@ -939,7 +940,7 @@ void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree
 		{
 			double temp;
 			in >> temp;
-			decomp_coeff[i].emplace_back(temp);
+			decomp_coeff[i].emplace_back(to_rr(temp));
 			// cout << decomp_coeff[i][j] << " ";
 		}
 		// cout << endl;
@@ -948,9 +949,9 @@ void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree
 	// scale coefficients properly so that unnecessary level consumptions do not occur
 	for (int i = 0; i < comp_no - 1; i++)
 		for (int j = 0; j < coeff_number(deg[i], tree[i]); j++)
-			decomp_coeff[i][j] /= scale_val[i + 1];
+			decomp_coeff[i][j] /= to_rr(scale_val[i + 1]);
 	for (int j = 0; j < coeff_number(deg[comp_no - 1], tree[comp_no - 1]); j++)
-		decomp_coeff[comp_no - 1][j] *= 0.5; // scale
+		decomp_coeff[comp_no - 1][j] *= to_rr(0.5); // scale
 
 	// generation of half PhantomCiphertext
 	long n = cipher_in.poly_modulus_degree() / 2;
@@ -1073,8 +1074,18 @@ void evalT(CKKSEvaluator &ckksevaluator, PhantomCiphertext &Tmplusn, const Phant
 	ckksevaluator.evaluator.rescale_to_next_inplace(temp);
 	ckksevaluator.evaluator.sub_reduced_error(temp, Tmminusn, Tmplusn);
 }
-void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &res, PhantomCiphertext &cipher, long deg, const vector<double> &decomp_coeff, Tree &tree)
+RR FixedPoint(double x, int) { return to_RR(x); }
+RR to_fixed_point(RR x, int prec) { return x; }
+void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &res, PhantomCiphertext &cipher, long deg, const vector<RR> &decomp_coeff, Tree &tree)
 {
+	int prec = 40;
+	auto not_cipher = FixedPoint(round(0.984 * 8192) / 8192, prec);
+	vector<RR> t_not_cph(deg + 10);
+	vector<RR> pt_not_cph(deg + 10);
+	vector<string> t_trace(deg + 10);
+	vector<string> pt_trace(deg + 10);
+	auto coeff_to_double = [](const RR &value) { return NTL::conv<double>(value); };
+
 	double scale = cipher.scale(); // ex) 2^42. exact value.
 	long n = cipher.poly_modulus_degree() / 2;
 	long total_depth = ceil_to_int(log(static_cast<double>(deg + 1)) / log(2.0)); // required minimum depth considering both scalar and nonscalar multiplications
@@ -1082,12 +1093,12 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 	evaltype eval_type = tree.type;
 	vector<long> decomp_deg(pow2(tree.depth + 1), -1);
 	vector<long> start_index(pow2(tree.depth + 1), -1);
-	vector<std::unique_ptr<PhantomCiphertext>> T(100);
-	vector<std::unique_ptr<PhantomCiphertext>> pt(100);
-	for (size_t i = 0; i < 100; i++)
-		T[i] = nullptr;
-	for (size_t i = 0; i < 100; i++)
-		pt[i] = nullptr;
+	vector<std::unique_ptr<PhantomCiphertext>> T(deg + 10);
+	vector<std::unique_ptr<PhantomCiphertext>> pt(deg + 10);
+	for (auto &t_i : T)
+		t_i = nullptr;
+	for (auto &pt_i : pt)
+		pt_i = nullptr;
 	T[0] = std::make_unique<PhantomCiphertext>();
 	T[1] = std::make_unique<PhantomCiphertext>();
 
@@ -1131,7 +1142,10 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 
 	// generate T0, T1
 	geneT0T1(ckksevaluator, *T[0], *T[1], cipher);
-
+	t_not_cph[0] = FixedPoint(1.0, prec);
+	t_not_cph[1] = not_cipher;
+	t_trace[0] = string("(R(1.0))");
+	t_trace[1] = string("(x)");
 	if (eval_type == evaltype::oddbaby)
 	{
 		// i: depth stage
@@ -1147,12 +1161,16 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 					int temp_idx = start_index[j];
 					// cout << "pt: " << j << endl;
 					pt[j] = std::make_unique<PhantomCiphertext>();
-					ckksevaluator.evaluator.multiply_const(*T[1], decomp_coeff[temp_idx], *pt[j]);
+					ckksevaluator.evaluator.multiply_const(*T[1], coeff_to_double(decomp_coeff[temp_idx]), *pt[j]);
+					pt_not_cph[j] = t_not_cph[1] * to_fixed_point(decomp_coeff[temp_idx], prec);
+					pt_trace[j] = string("(") + t_trace[1] + " * R(" + to_string(coeff_to_double(decomp_coeff[temp_idx])) + "))";
 					temp_idx += 2;
 					for (int k = 3; k <= decomp_deg[j]; k += 2)
 					{
-						ckksevaluator.evaluator.multiply_const(*T[k], decomp_coeff[temp_idx], temp1);
+						ckksevaluator.evaluator.multiply_const(*T[k], coeff_to_double(decomp_coeff[temp_idx]), temp1);
 						ckksevaluator.evaluator.add_inplace_reduced_error(*pt[j], temp1); // this is lazy scaling!!
+						pt_not_cph[j] += t_not_cph[k] * to_fixed_point(decomp_coeff[temp_idx], prec);
+						pt_trace[j] = string("(") + pt_trace[j] + " + " + t_trace[k] + " * R(" + to_string(coeff_to_double(decomp_coeff[temp_idx])) + "))";
 
 						temp_idx += 2;
 					}
@@ -1174,6 +1192,8 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 					// cout << "pt: " << j << endl;
 					pt[j] = std::make_unique<PhantomCiphertext>();
 					ckksevaluator.evaluator.multiply_reduced_error(*T[tree.tree[k]], *pt[2 * k + 1], *(ckksevaluator.relin_keys), *pt[j]);
+					pt_not_cph[j] = t_not_cph[tree.tree[k]] * pt_not_cph[2 * k + 1];
+					pt_trace[j] = string("(") + t_trace[tree.tree[k]] + " * " + pt_trace[2 * k + 1] + ")";
 					k *= 2;
 					while (1)
 					{
@@ -1181,10 +1201,14 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 							break;
 						ckksevaluator.evaluator.multiply_reduced_error(*T[tree.tree[k]], *pt[2 * k + 1], *(ckksevaluator.relin_keys), temp1);
 						ckksevaluator.evaluator.add_inplace_reduced_error(*pt[j], temp1); // lazy scaling code
+						pt_not_cph[j] += t_not_cph[tree.tree[k]] * pt_not_cph[2 * k + 1];
+						pt_trace[j] = string("(") + pt_trace[j] + " + " + t_trace[tree.tree[k]] + " * " + pt_trace[2 * k + 1] + ")";
 						k *= 2;
 					}
 					ckksevaluator.evaluator.rescale_to_next_inplace(*pt[j]);
 					ckksevaluator.evaluator.add_inplace_reduced_error(*pt[j], *pt[k]);
+					pt_not_cph[j] += pt_not_cph[k];
+					pt_trace[j] = string("(") + pt_trace[j] + " + " + pt_trace[k] + ")";
 					// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *pt[j]);
 					// decrypt_and_print_part(*pt[j], decryptor, encoder, n, 0, 5);
 				}
@@ -1196,6 +1220,8 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 				// cout << "T: " << pow2(i) << endl;
 				T[pow2(i)] = std::make_unique<PhantomCiphertext>();
 				evalT(ckksevaluator, *T[pow2(i)], *T[pow2(i - 1)], *T[pow2(i - 1)], *T[0]);
+				t_not_cph[pow2(i)] = t_not_cph[pow2(i - 1)] * t_not_cph[pow2(i - 1)] * FixedPoint(2.0, prec) - t_not_cph[0];
+				t_trace[pow2(i)] = string("(") + t_trace[pow2(i - 1)] + "^2 * R(2.0) - " + t_trace[0] + ")";
 				// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *T[pow2(i)]);
 				// decrypt_and_print_part(*T[pow2(i)], decryptor, encoder, n, 0, 5);
 			}
@@ -1207,6 +1233,8 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 					// cout << "T: " << j << endl;
 					T[j] = std::make_unique<PhantomCiphertext>();
 					evalT(ckksevaluator, *T[j], *T[pow2(i - 1)], *T[j - pow2(i - 1)], *T[pow2(i) - j]);
+					t_not_cph[j] = t_not_cph[pow2(i - 1)] * t_not_cph[j - pow2(i - 1)] * FixedPoint(2.0, prec) - t_not_cph[pow2(i) - j];
+					t_trace[j] = string("(") + t_trace[pow2(i - 1)] + " * " + t_trace[j - pow2(i - 1)] + " * R(2.0) - " + t_trace[pow2(i) - j] + ")";
 					// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *T[j]);
 					// decrypt_and_print_part(*T[j], decryptor, encoder, n, 0, 5);
 				}
@@ -1235,12 +1263,14 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 					for (int k = 0; k <= decomp_deg[j]; k++)
 					{
 						// cout << "coeff[temp_idx]: " <<  coeff[temp_idx] << endl;
-						if (abs(decomp_coeff[temp_idx]) > 1.0 / scale) // to avoid transparent PhantomCiphertext
+						if (std::abs(coeff_to_double(decomp_coeff[temp_idx])) > 1.0 / scale) // to avoid transparent PhantomCiphertext
 						{
 							if (T[k] == nullptr)
 								throw std::runtime_error("T[k] is not set");
-							ckksevaluator.evaluator.multiply_const(*T[k], decomp_coeff[temp_idx], temp1);
+							ckksevaluator.evaluator.multiply_const(*T[k], coeff_to_double(decomp_coeff[temp_idx]), temp1);
 							ckksevaluator.evaluator.add_inplace(*pt[j], temp1); // this is lazy scaling!!
+							pt_not_cph[j] += t_not_cph[k] * to_fixed_point(decomp_coeff[temp_idx], prec);
+							pt_trace[j] = string("(") + pt_trace[j] + " + " + t_trace[k] + " * R(" + to_string(coeff_to_double(decomp_coeff[temp_idx])) + "))";
 						}
 						temp_idx++;
 					}
@@ -1289,6 +1319,8 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 						if (pt[2 * k + 1] == nullptr)
 							throw std::runtime_error("pt[2*k+1] is not set");
 						ckksevaluator.evaluator.multiply_reduced_error(*T[tree.tree[k]], *pt[2 * k + 1], *(ckksevaluator.relin_keys), *pt[j]);
+						pt_not_cph[j] = t_not_cph[tree.tree[k]] * pt_not_cph[2 * k + 1];
+						pt_trace[j] = string("(") + t_trace[tree.tree[k]] + " * " + pt_trace[2 * k + 1] + ")";
 						k *= 2;
 
 						while (1)
@@ -1301,10 +1333,14 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 								throw std::runtime_error("pt[2*k+1] is not set");
 							ckksevaluator.evaluator.multiply_reduced_error(*T[tree.tree[k]], *pt[2 * k + 1], *(ckksevaluator.relin_keys), temp1);
 							ckksevaluator.evaluator.add_inplace(*pt[j], temp1); // lazy scaling code
+							pt_not_cph[j] += t_not_cph[tree.tree[k]] * pt_not_cph[2 * k + 1];
+							pt_trace[j] = string("(") + pt_trace[j] + " + " + t_trace[tree.tree[k]] + " * " + pt_trace[2 * k + 1] + ")";
 							k *= 2;
 						}
 						ckksevaluator.evaluator.rescale_to_next_inplace(*pt[j]);
 						ckksevaluator.evaluator.add_inplace_reduced_error(*pt[j], *pt[k]);
+						pt_not_cph[j] += pt_not_cph[k];
+						pt_trace[j] = string("(") + pt_trace[j] + " + " + pt_trace[k] + ")";
 						// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *pt[j]);
 					}
 				}
@@ -1318,27 +1354,31 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 				{
 					// cout << "T: " << g << endl;
 					T[g] = std::make_unique<PhantomCiphertext>();
-					if (g % 2 == 0)
-					{
-						if (T[g / 2] == nullptr)
-							throw std::runtime_error("T[g/2] is not set");
-						if (T[0] == nullptr)
-							throw std::runtime_error("T[0] is not set");
-						evalT(ckksevaluator, *T[g], *T[g / 2], *T[g / 2], *T[0]);
+						if (g % 2 == 0)
+						{
+							if (T[g / 2] == nullptr)
+								throw std::runtime_error("T[g/2] is not set");
+							if (T[0] == nullptr)
+								throw std::runtime_error("T[0] is not set");
+							evalT(ckksevaluator, *T[g], *T[g / 2], *T[g / 2], *T[0]);
+							t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[g / 2] * FixedPoint(2.0, prec) - t_not_cph[0];
+							t_trace[g] = string("(") + t_trace[g / 2] + "^2 * R(2.0) - " + t_trace[0] + ")";
+						}
+						else
+						{
+							if (T[g / 2] == nullptr)
+								throw std::runtime_error("T[g/2] is not set");
+							if (T[(g + 1) / 2] == nullptr)
+								throw std::runtime_error("T[(g+1)/2] is not set");
+							if (T[0] == nullptr)
+								throw std::runtime_error("T[0] is not set");
+							evalT(ckksevaluator, *T[g], *T[g / 2], *T[(g + 1) / 2], *T[1]);
+							t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[(g + 1) / 2] * FixedPoint(2.0, prec) - t_not_cph[1];
+							t_trace[g] = string("(") + t_trace[g / 2] + " * " + t_trace[(g + 1) / 2] + " * R(2.0) - " + t_trace[1] + ")";
+						}
+						// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *T[g]);
 					}
-					else
-					{
-						if (T[g / 2] == nullptr)
-							throw std::runtime_error("T[g/2] is not set");
-						if (T[(g + 1) / 2] == nullptr)
-							throw std::runtime_error("T[(g+1)/2] is not set");
-						if (T[0] == nullptr)
-							throw std::runtime_error("T[0] is not set");
-						evalT(ckksevaluator, *T[g], *T[g / 2], *T[(g + 1) / 2], *T[1]);
-					}
-					// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *T[g]);
 				}
-			}
 			for (int j = 1; j <= tree.m - 1; j++)
 			{
 				int g = pow2(j) * tree.b;
@@ -1353,6 +1393,8 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 						if (T[0] == nullptr)
 							throw std::runtime_error("T[0] is not set");
 						evalT(ckksevaluator, *T[g], *T[g / 2], *T[g / 2], *T[0]);
+						t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[g / 2] * FixedPoint(2.0, prec) - t_not_cph[0];
+						t_trace[g] = string("(") + t_trace[g / 2] + "^2 * R(2.0) - " + t_trace[0] + ")";
 					}
 					else
 					{
@@ -1363,6 +1405,8 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 						if (T[0] == nullptr)
 							throw std::runtime_error("T[0] is not set");
 						evalT(ckksevaluator, *T[g], *T[g / 2], *T[(g + 1) / 2], *T[1]);
+						t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[(g + 1) / 2] * FixedPoint(2.0, prec) - t_not_cph[1];
+						t_trace[g] = string("(") + t_trace[g / 2] + " * " + t_trace[(g + 1) / 2] + " * R(2.0) - " + t_trace[1] + ")";
 					}
 					// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *T[g]);
 				}
@@ -1417,7 +1461,7 @@ long ShowFailure_ReLU(CKKSEvaluator &ckksevaluator, PhantomCiphertext &cipher, v
 	return failure;
 }
 
-void decrypt_and_print( PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator, long sparse_slots, size_t front, size_t back)
+void decrypt_and_print(PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator, long sparse_slots, size_t front, size_t back)
 {
 	PhantomPlaintext plain;
 	ckksevaluator.decryptor.decrypt(cipher, plain);
@@ -1444,7 +1488,7 @@ void decrypt_and_print( PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator,
 	}
 	cout << ")" << endl;
 }
-void decrypt_and_print_part( PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator, long sparse_slots, size_t start, size_t end)
+void decrypt_and_print_part(PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator, long sparse_slots, size_t start, size_t end)
 {
 	PhantomPlaintext plain;
 	ckksevaluator.decryptor.decrypt(cipher, plain);
@@ -1461,7 +1505,7 @@ void decrypt_and_print_part( PhantomCiphertext &cipher, CKKSEvaluator &ckksevalu
 	cout << ")" << endl;
 	cout << "scale: " << cipher.scale() << endl;
 }
-void decrypt_and_print_txt( PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator, long sparse_slots, size_t front, size_t back, ofstream &output)
+void decrypt_and_print_txt(PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator, long sparse_slots, size_t front, size_t back, ofstream &output)
 {
 	PhantomPlaintext plain;
 	ckksevaluator.decryptor.decrypt(cipher, plain);
@@ -1547,7 +1591,7 @@ void import_parameters_cifar10(vector<double> &linear_weight, vector<double> &li
 	// convolution parameters
 	ci = 3, co = 16;
 	in.open("../../pretrained_parameters/" + dir + "/conv1_weight.txt");
-	
+
 	if (!in.is_open())
 		throw std::runtime_error("file is not open");
 	for (long i = 0; i < fh * fw * ci * co; i++)
@@ -1772,7 +1816,8 @@ void import_parameters_cifar10(vector<double> &linear_weight, vector<double> &li
 void import_parameters_cifar100(vector<double> &linear_weight, vector<double> &linear_bias, vector<vector<double>> &conv_weight, vector<vector<double>> &bn_bias, vector<vector<double>> &bn_running_mean, vector<vector<double>> &bn_running_var, vector<vector<double>> &bn_weight, vector<vector<double>> &shortcut_weight, vector<vector<double>> &shortcut_bn_bias, vector<vector<double>> &shortcut_bn_mean, vector<vector<double>> &shortcut_bn_var, vector<vector<double>> &shortcut_bn_weight, size_t layer_num, size_t end_num)
 {
 	string dir;
-	if(layer_num!=32) throw std::invalid_argument("layer number is not valid");
+	if (layer_num != 32)
+		throw std::invalid_argument("layer number is not valid");
 	dir = "resnet32_cifar100";
 
 	ifstream in;
@@ -1780,15 +1825,15 @@ void import_parameters_cifar100(vector<double> &linear_weight, vector<double> &l
 	size_t num_c = 0, num_b = 0, num_m = 0, num_v = 0, num_w = 0;
 
 	conv_weight.clear();
-	conv_weight.resize(layer_num-1);
+	conv_weight.resize(layer_num - 1);
 	bn_bias.clear();
-	bn_bias.resize(layer_num-1);
+	bn_bias.resize(layer_num - 1);
 	bn_running_mean.clear();
-	bn_running_mean.resize(layer_num-1);
+	bn_running_mean.resize(layer_num - 1);
 	bn_running_var.clear();
-	bn_running_var.resize(layer_num-1);
+	bn_running_var.resize(layer_num - 1);
 	bn_weight.clear();
-	bn_weight.resize(layer_num-1);
+	bn_weight.resize(layer_num - 1);
 
 	shortcut_weight.clear();
 	shortcut_weight.resize(2);
@@ -1806,108 +1851,482 @@ void import_parameters_cifar100(vector<double> &linear_weight, vector<double> &l
 
 	// convolution parameters
 	ci = 3, co = 16;
-	in.open("../../pretrained_parameters/" + dir + "/conv1_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<fh*fw*ci*co; i++) {in>>val; conv_weight[num_c].emplace_back(val);} in.close(); num_c++;
+	in.open("../../pretrained_parameters/" + dir + "/conv1_weight.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < fh * fw * ci * co; i++)
+	{
+		in >> val;
+		conv_weight[num_c].emplace_back(val);
+	}
+	in.close();
+	num_c++;
 
 	// convolution parameters
-	for(int j=1; j<=3; j++)
+	for (int j = 1; j <= 3; j++)
 	{
-		for(int k=0; k<=end_num; k++)
+		for (int k = 0; k <= end_num; k++)
 		{
 			// co setting
-			if(j==1) co=16;
-			else if(j==2) co=32;
-			else if(j==3) co=64;
+			if (j == 1)
+				co = 16;
+			else if (j == 2)
+				co = 32;
+			else if (j == 3)
+				co = 64;
 
 			// ci setting
-			if(j==1 || (j==2 && k==0)) ci=16;
-			else if((j==2 && k!=0) || (j==3 && k==0)) ci=32;
-			else ci=64;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_conv1_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<fh*fw*ci*co; i++) {in>>val; conv_weight[num_c].emplace_back(val);} in.close(); num_c++;
+			if (j == 1 || (j == 2 && k == 0))
+				ci = 16;
+			else if ((j == 2 && k != 0) || (j == 3 && k == 0))
+				ci = 32;
+			else
+				ci = 64;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_conv1_weight.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < fh * fw * ci * co; i++)
+			{
+				in >> val;
+				conv_weight[num_c].emplace_back(val);
+			}
+			in.close();
+			num_c++;
 
 			// ci setting
-			if(j==1) ci = 16;
-			else if(j==2) ci = 32;
-			else if(j==3) ci = 64;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_conv2_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<fh*fw*ci*co; i++) {in>>val; conv_weight[num_c].emplace_back(val);} in.close(); num_c++;
+			if (j == 1)
+				ci = 16;
+			else if (j == 2)
+				ci = 32;
+			else if (j == 3)
+				ci = 64;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_conv2_weight.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < fh * fw * ci * co; i++)
+			{
+				in >> val;
+				conv_weight[num_c].emplace_back(val);
+			}
+			in.close();
+			num_c++;
 		}
 	}
 
 	// shortcut convolution parameters
 	fh = 1, fw = 1;
 	ci = 16, co = 32;
-	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_0_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<fh*fw*ci*co; i++) {in>>val; shortcut_weight[0].emplace_back(val);} in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_0_weight.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < fh * fw * ci * co; i++)
+	{
+		in >> val;
+		shortcut_weight[0].emplace_back(val);
+	}
+	in.close();
 	ci = 32, co = 64;
-	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_0_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<fh*fw*ci*co; i++) {in>>val; shortcut_weight[1].emplace_back(val);} in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_0_weight.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < fh * fw * ci * co; i++)
+	{
+		in >> val;
+		shortcut_weight[1].emplace_back(val);
+	}
+	in.close();
 
 	// batch_normalization parameters
 	ci = 16;
-	in.open("../../pretrained_parameters/" + dir + "/bn1_bias.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; bn_bias[num_b].emplace_back(val);} in.close(); num_b++;
-	in.open("../../pretrained_parameters/" + dir + "/bn1_running_mean.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; bn_running_mean[num_m].emplace_back(val);} in.close(); num_m++;
-	in.open("../../pretrained_parameters/" + dir + "/bn1_running_var.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; bn_running_var[num_v].emplace_back(val);} in.close(); num_v++;
-	in.open("../../pretrained_parameters/" + dir + "/bn1_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; bn_weight[num_w].emplace_back(val);} in.close(); num_w++;
+	in.open("../../pretrained_parameters/" + dir + "/bn1_bias.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		bn_bias[num_b].emplace_back(val);
+	}
+	in.close();
+	num_b++;
+	in.open("../../pretrained_parameters/" + dir + "/bn1_running_mean.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		bn_running_mean[num_m].emplace_back(val);
+	}
+	in.close();
+	num_m++;
+	in.open("../../pretrained_parameters/" + dir + "/bn1_running_var.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		bn_running_var[num_v].emplace_back(val);
+	}
+	in.close();
+	num_v++;
+	in.open("../../pretrained_parameters/" + dir + "/bn1_weight.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		bn_weight[num_w].emplace_back(val);
+	}
+	in.close();
+	num_w++;
 
 	// batch_normalization parameters
-	for(int j=1; j<=3; j++)
+	for (int j = 1; j <= 3; j++)
 	{
 		int ci;
-		if(j==1) ci=16;
-		else if(j==2) ci=32;
-		else if(j==3) ci=64;
+		if (j == 1)
+			ci = 16;
+		else if (j == 2)
+			ci = 32;
+		else if (j == 3)
+			ci = 64;
 
-		for(int k=0; k<=end_num; k++)
+		for (int k = 0; k <= end_num; k++)
 		{
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_bias.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_bias[num_b].emplace_back(val);} in.close(); num_b++;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_running_mean.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_running_mean[num_m].emplace_back(val);} in.close(); num_m++;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_running_var.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_running_var[num_v].emplace_back(val);} in.close(); num_v++;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_weight[num_w].emplace_back(val);} in.close(); num_w++;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_bias.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_bias[num_b].emplace_back(val);} in.close(); num_b++;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_running_mean.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_running_mean[num_m].emplace_back(val);} in.close(); num_m++;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_running_var.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_running_var[num_v].emplace_back(val);} in.close(); num_v++;
-			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-			for(long i=0; i<ci; i++) {in>>val; bn_weight[num_w].emplace_back(val);} in.close(); num_w++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_bias.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_bias[num_b].emplace_back(val);
+			}
+			in.close();
+			num_b++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_running_mean.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_running_mean[num_m].emplace_back(val);
+			}
+			in.close();
+			num_m++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_running_var.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_running_var[num_v].emplace_back(val);
+			}
+			in.close();
+			num_v++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn1_weight.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_weight[num_w].emplace_back(val);
+			}
+			in.close();
+			num_w++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_bias.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_bias[num_b].emplace_back(val);
+			}
+			in.close();
+			num_b++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_running_mean.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_running_mean[num_m].emplace_back(val);
+			}
+			in.close();
+			num_m++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_running_var.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_running_var[num_v].emplace_back(val);
+			}
+			in.close();
+			num_v++;
+			in.open("../../pretrained_parameters/" + dir + "/layer" + to_string(j) + "_" + to_string(k) + "_bn2_weight.txt");
+			if (!in.is_open())
+				throw std::runtime_error("file is not open");
+			for (long i = 0; i < ci; i++)
+			{
+				in >> val;
+				bn_weight[num_w].emplace_back(val);
+			}
+			in.close();
+			num_w++;
 		}
 	}
 
 	// shortcut batch normalization parameters
 	ci = 32;
-	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_bias.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_bias[0].emplace_back(val);} in.close();		// layer 1
-	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_running_mean.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_mean[0].emplace_back(val);} in.close();
-	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_running_var.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_var[0].emplace_back(val);} in.close();
-	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_weight[0].emplace_back(val);} in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_bias.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_bias[0].emplace_back(val);
+	}
+	in.close(); // layer 1
+	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_running_mean.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_mean[0].emplace_back(val);
+	}
+	in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_running_var.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_var[0].emplace_back(val);
+	}
+	in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer2_0_shortcut_1_weight.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_weight[0].emplace_back(val);
+	}
+	in.close();
 
 	ci = 64;
-	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_bias.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_bias[1].emplace_back(val);} in.close();		// layer 1
-	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_running_mean.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_mean[1].emplace_back(val);} in.close();
-	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_running_var.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_var[1].emplace_back(val);} in.close();
-	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<ci; i++) {in>>val; shortcut_bn_weight[1].emplace_back(val);} in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_bias.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_bias[1].emplace_back(val);
+	}
+	in.close(); // layer 1
+	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_running_mean.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_mean[1].emplace_back(val);
+	}
+	in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_running_var.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_var[1].emplace_back(val);
+	}
+	in.close();
+	in.open("../../pretrained_parameters/" + dir + "/layer3_0_shortcut_1_weight.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < ci; i++)
+	{
+		in >> val;
+		shortcut_bn_weight[1].emplace_back(val);
+	}
+	in.close();
 
 	// FC
-	in.open("../../pretrained_parameters/" + dir + "/linear_weight.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<100*64; i++) {in>>val; linear_weight.emplace_back(val);} in.close();
-	in.open("../../pretrained_parameters/" + dir + "/linear_bias.txt"); if(!in.is_open()) throw std::runtime_error("file is not open");
-	for(long i=0; i<100; i++) {in>>val; linear_bias.emplace_back(val);} in.close();
+	in.open("../../pretrained_parameters/" + dir + "/linear_weight.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < 100 * 64; i++)
+	{
+		in >> val;
+		linear_weight.emplace_back(val);
+	}
+	in.close();
+	in.open("../../pretrained_parameters/" + dir + "/linear_bias.txt");
+	if (!in.is_open())
+		throw std::runtime_error("file is not open");
+	for (long i = 0; i < 100; i++)
+	{
+		in >> val;
+		linear_bias.emplace_back(val);
+	}
+	in.close();
+}
+
+void upgrade_oddbaby(long n, Tree &tree) // n should be odd
+{
+	long d = ceil_to_int(log(static_cast<double>(n)) / log(2.0)); // required minimum depth
+	long m, l;
+	long min, total_min = 10000, min_m = 0, min_l = 0;
+	Tree min_tree, total_min_tree;
+
+	for (l = 1; pow2(l) - 1 <= n; l++)
+	{
+		for (m = 1; pow2(m - 1) < n; m++)
+		{
+			// initialization
+			vector<vector<int>> f(n + 1, vector<int>(d + 1, 0));
+			vector<vector<Tree>> G(n + 1, vector<Tree>(d + 1, Tree(evaltype::oddbaby)));
+			f[1][1] = 0;
+			for (int i = 3; i <= n; i += 2)
+				f[i][1] = 10000;
+
+			// recursion
+			for (int j = 2; j <= d; j++)
+			{
+				for (int i = 1; i <= n; i += 2)
+				{
+					if (i <= pow2(l) - 1 && i <= pow2(j - 1))
+						f[i][j] = 0;
+					else
+					{
+						min = 10000;
+						min_tree.clear();
+						for (int k = 1; k <= m - 1 && pow2(k) < i && k < j; k++) // g = 2^k
+						{
+							long g = pow2(k);
+							if (f[i - g][j - 1] + f[g - 1][j] + 1 < min)
+							{
+								min = f[i - g][j - 1] + f[g - 1][j] + 1;
+								min_tree.merge(G[g - 1][j], G[i - g][j - 1], g);
+							}
+						}
+						f[i][j] = min;
+						G[i][j] = min_tree;
+					}
+				}
+			}
+			if (f[n][d] + pow2(l - 1) + m - 2 < total_min)
+			{
+				total_min = f[n][d] + pow2(l - 1) + m - 2;
+				total_min_tree = G[n][d];
+				min_m = m;
+				min_l = l;
+			}
+		}
+	}
+
+	// cout << "deg " << n << ": " << total_min << endl;
+	// cout << "m: " << min_m << ", l: " << min_l << endl;
+	tree = total_min_tree;
+	tree.m = min_m;
+	tree.l = min_l;
+}
+void upgrade_baby(long n, Tree &tree)
+{
+	long d = ceil_to_int(log(static_cast<double>(n + 1)) / log(2.0)); // required minimum depth
+	long m, b;
+	long min, total_min = 10000, min_m = 0, min_b = 0;
+	Tree min_tree, total_min_tree;
+	evaltype type = evaltype::baby;
+
+	// cout << "minimum depth: " << d << endl;
+
+	// n==1
+	if (n == 1)
+	{
+		total_min = 0;
+		total_min_tree = Tree(type);
+		min_m = 1;
+		min_b = 1;
+	}
+
+	for (b = 1; b <= n; b++)
+	{
+		for (m = 1; pow2(m - 1) * b <= n; m++)
+		{
+			//	cout << "Stage b,m: " << b << " " << m << endl;
+
+			// initialization
+			vector<vector<int>> f(n + 1, vector<int>(d + 1, 0));
+			vector<vector<Tree>> G(n + 1, vector<Tree>(d + 1, Tree(type)));
+
+			// recursion
+			for (int j = 1; j <= d; j++)
+			{
+				for (int i = 1; i <= n; i++)
+				{
+					// int k;
+					if (i + 1 > pow2(j))
+					{
+						f[i][j] = 10000;
+						G[i][j] = Tree(type);
+					}
+					else if (b == 1 && m >= 2 && i <= 2 && i <= pow2(j - 1))
+					{
+						f[i][j] = 0;
+						G[i][j] = Tree(type);
+					}
+					else if (i <= b && i <= pow2(j - 1))
+					{
+						f[i][j] = 0;
+						G[i][j] = Tree(type);
+					}
+					else
+					{
+						min = 10000;
+						min_tree.clear();
+						for (int k = 2; k <= b; k++) // g = k
+						{
+							long g = k;
+							if (g <= pow2(j - 1) && 2 <= g && g < i && f[i - g][j - 1] + f[g - 1][j] + 1 < min)
+							{
+								min = f[i - g][j - 1] + f[g - 1][j] + 1;
+								min_tree.merge(G[g - 1][j], G[i - g][j - 1], g);
+							}
+						}
+						for (int k = 0; k <= m - 1; k++) // g = 2^k b
+						{
+							long g = pow2(k) * b;
+							if (g <= pow2(j - 1) && 2 <= g && g < i && f[i - g][j - 1] + f[g - 1][j] + 1 < min)
+							{
+								min = f[i - g][j - 1] + f[g - 1][j] + 1;
+								min_tree.merge(G[g - 1][j], G[i - g][j - 1], g);
+							}
+						}
+						f[i][j] = min;
+						G[i][j] = min_tree;
+						if (min == 10000)
+						{
+							//		cout << "no g found " << b << " " << m << " " << j << " " << i << endl;
+							//		throw std::runtime_error("this case should not occur!");
+						}
+					}
+				}
+			}
+			if (f[n][d] + m + b - 2 < total_min)
+			{
+				total_min = f[n][d] + m + b - 2;
+				total_min_tree = G[n][d];
+				min_m = m;
+				min_b = b;
+			}
+		}
+	}
+
+	// cout << "deg " << n << ": " << total_min << endl;
+	// cout << "m: " << min_m << ", b: " << min_b << endl;
+	tree = total_min_tree;
+	tree.m = min_m;
+	tree.b = min_b;
 }
