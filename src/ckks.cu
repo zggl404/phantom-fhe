@@ -213,6 +213,110 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
     destination.scale_ = scale;
 }
 
+void PhantomCKKSEncoder::encode_coeffs(const PhantomContext &context,
+                                       const std::vector<double> &values,
+                                       double scale,
+                                       PhantomPlaintext &destination,
+                                       size_t chain_index,
+                                       const cuda_stream_wrapper &stream_wrapper) {
+    const auto &s = stream_wrapper.get_stream();
+    auto &context_data = context.get_context_data(chain_index);
+    auto &parms = context_data.parms();
+    auto &coeff_modulus = parms.coeff_modulus();
+    auto &rns_tool = context_data.gpu_rns_tool();
+    std::size_t coeff_modulus_size = coeff_modulus.size();
+    std::size_t coeff_count = parms.poly_modulus_degree();
+    std::size_t slots = coeff_count >> 1;
+
+    if (values.size() > coeff_count) {
+        throw std::invalid_argument("values_size is too large");
+    }
+    if (scale <= 0 || (static_cast<int>(log2(scale)) > context_data.total_coeff_modulus_bit_count())) {
+        throw std::invalid_argument("scale out of bounds");
+    }
+
+    destination.chain_index_ = 0;
+    destination.resize(coeff_modulus_size, coeff_count, s);
+
+    std::vector<cuDoubleComplex> packed(slots, make_cuDoubleComplex(0.0, 0.0));
+    double max_coeff = 0.0;
+    for (std::size_t i = 0; i < values.size(); i++) {
+        double scaled = values[i] * scale;
+        if (i < slots) {
+            packed[i].x = scaled;
+        } else {
+            packed[i - slots].y = scaled;
+        }
+        max_coeff = std::max(max_coeff, std::fabs(scaled));
+    }
+
+    int max_coeff_bit_count = static_cast<int>(std::ceil(std::log2(std::max(max_coeff, 1.0)))) + 1;
+    if (max_coeff_bit_count >= context_data.total_coeff_modulus_bit_count()) {
+        throw std::invalid_argument("encoded values are too large");
+    }
+
+    auto device_coeffs = make_cuda_auto_ptr<cuDoubleComplex>(slots, s);
+    PHANTOM_CHECK_CUDA(cudaMemcpyAsync(device_coeffs.get(), packed.data(),
+                                       slots * sizeof(cuDoubleComplex), cudaMemcpyHostToDevice, s));
+
+    rns_tool.base_Ql().decompose_array(destination.data(), device_coeffs.get(),
+                                       static_cast<uint32_t>(coeff_count), 1,
+                                       static_cast<uint32_t>(max_coeff_bit_count), s);
+
+    nwt_2d_radix8_forward_inplace(destination.data(), context.gpu_rns_tables(), coeff_modulus_size, 0, s);
+
+    destination.chain_index_ = chain_index;
+    destination.scale_ = scale;
+}
+
+void PhantomCKKSEncoder::decode_coeffs(const PhantomContext &context,
+                                       const PhantomPlaintext &plain,
+                                       std::vector<double> &destination,
+                                       const cuda_stream_wrapper &stream_wrapper) {
+    const auto &s = stream_wrapper.get_stream();
+    auto &context_data = context.get_context_data(plain.chain_index());
+    auto &parms = context_data.parms();
+    auto &coeff_modulus = parms.coeff_modulus();
+    auto &rns_tool = context_data.gpu_rns_tool();
+    size_t coeff_mod_size = coeff_modulus.size();
+    size_t coeff_count = parms.poly_modulus_degree();
+    size_t slots = coeff_count >> 1;
+
+    if (plain.scale() <= 0 ||
+        (static_cast<int>(log2(plain.scale())) > context_data.total_coeff_modulus_bit_count())) {
+        throw std::invalid_argument("scale out of bounds");
+    }
+
+    auto plain_copy = make_cuda_auto_ptr<uint64_t>(coeff_count * coeff_mod_size, s);
+    cudaMemcpyAsync(plain_copy.get(), plain.data(),
+                    coeff_count * coeff_mod_size * sizeof(uint64_t),
+                    cudaMemcpyDeviceToDevice, s);
+
+    nwt_2d_radix8_backward_inplace(plain_copy.get(), context.gpu_rns_tables(), coeff_mod_size, 0, s);
+
+    auto upper_half_threshold = context_data.upper_half_threshold();
+    auto gpu_upper_half_threshold = make_cuda_auto_ptr<uint64_t>(upper_half_threshold.size(), s);
+    cudaMemcpyAsync(gpu_upper_half_threshold.get(), upper_half_threshold.data(),
+                    upper_half_threshold.size() * sizeof(uint64_t), cudaMemcpyHostToDevice, s);
+
+    gpu_ckks_msg_vec_->set_sparse_slots(static_cast<uint32_t>(slots));
+    rns_tool.base_Ql().compose_array(gpu_ckks_msg_vec_->in(), plain_copy.get(),
+                                     gpu_upper_half_threshold.get(), 1.0 / plain.scale(),
+                                     static_cast<uint32_t>(coeff_count),
+                                     static_cast<uint32_t>(coeff_count), 1, s);
+
+    std::vector<cuDoubleComplex> host_coeffs(slots);
+    cudaMemcpyAsync(host_coeffs.data(), gpu_ckks_msg_vec_->in(),
+                    slots * sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost, s);
+    cudaStreamSynchronize(s);
+
+    destination.assign(coeff_count, 0.0);
+    for (size_t i = 0; i < slots; i++) {
+        destination[i] = host_coeffs[i].x;
+        destination[i + slots] = host_coeffs[i].y;
+    }
+}
+
 void PhantomCKKSEncoder::decode_internal(const PhantomContext &context, const PhantomPlaintext &plain,
                                          cuDoubleComplex *destination, const cudaStream_t &stream) {
     if (!destination) {

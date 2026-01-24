@@ -141,6 +141,18 @@ public:
         return destination;
     }
 
+    void encode_coeffs(const PhantomContext &context,
+                       const std::vector<double> &values,
+                       double scale,
+                       PhantomPlaintext &destination,
+                       size_t chain_index = 1,
+                       const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream);
+
+    void decode_coeffs(const PhantomContext &context,
+                       const PhantomPlaintext &plain,
+                       std::vector<double> &destination,
+                       const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream);
+
     [[nodiscard]] inline std::size_t slot_count() const noexcept {
         return slots_;
     }
