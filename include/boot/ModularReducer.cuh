@@ -44,6 +44,7 @@ class ModularReducer {
   void generate_inverse_sine_polynomial();
   void scaling_for_turn_back_q();
   void write_polynomials();
+  void modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphertext &cipher);
   void modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext &cipher);
 
   vector<RR> arcsin_decomp_coeff;

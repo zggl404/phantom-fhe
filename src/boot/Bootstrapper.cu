@@ -4020,7 +4020,6 @@ void Bootstrapper::slim_sfl_full_3(PhantomCiphertext &rtncipher, PhantomCipherte
     for (auto &e : v)
     {
       e *= scale_for_eval;
-      e *= scale_for_boost_relu_range;
     }
   }
 
@@ -4296,8 +4295,8 @@ void Bootstrapper::slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, Phan
   cout << "scale = " << setprecision(10) << real_part.scale() << endl;
 
   rtncipher = real_part;
-  // rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
-  rtn.scale() = pow(2.0, 46);
+  rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
+  
   cout << "scale = " << setprecision(10) << rtncipher.scale() << endl;
 }
 

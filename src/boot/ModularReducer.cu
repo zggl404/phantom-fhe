@@ -357,7 +357,30 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
   cos_tmp1 = cipher;
   PhantomCiphertext sin_rtn, cos_rtn;
 
-  double inv_of_scale_for_eval = 1.0/scale_for_eval;
+  double inv_of_scale_for_eval = 1.0 / scale_for_eval;
+
+  sin_polynomial.homomorphic_poly_evaluation(ckks, sin_tmp2, sin_tmp1);
+  // cout << "after sin poly, #q = " << cos_tmp2.coeff_modulus_size() << endl;
+  {
+    for (int i = 0; i < num_double_formula; i++)
+    {
+      double_angle_formula(sin_tmp2);
+    }
+    // cout << "after double angle for cos, #q = " << cos_tmp2.coeff_modulus_size() << endl;
+  }
+
+  inverse_sin_polynomial_v1.homomorphic_poly_evaluation(ckks, rtn, sin_tmp2);
+  // inverse_sin_polynomial_v1.homomorphic_poly_evaluation_naive(context, encoder, encryptor, evaluator, relin_keys, sin_rtn, sin_tmp2, decryptor);
+  ckks->evaluator.mod_switch_to_next_inplace(rtn);
+}
+void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphertext &cipher)
+{
+  PhantomCiphertext sin_tmp1, sin_tmp2, cos_tmp1, cos_tmp2;
+  sin_tmp1 = cipher;
+  cos_tmp1 = cipher;
+  PhantomCiphertext sin_rtn, cos_rtn;
+
+  double inv_of_scale_for_eval = 1.0 / scale_for_eval;
 
   sin_polynomial.homomorphic_poly_evaluation(ckks, cos_tmp2, cos_tmp1);
   // cout << "after sin poly, #q = " << cos_tmp2.coeff_modulus_size() << endl;
@@ -375,15 +398,15 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
 
   eval_polynomial_integrate(*ckks, cos_rtn, cos_tmp2, 127, arcsin_decomp_coeff, arcsin_tree);
   cout << "after eval arcsin, #q = " << cos_rtn.coeff_modulus_size() << endl;
-  ckks->evaluator.add_const_inplace(cos_rtn, 0.125/scale_for_eval*0.5);
+  ckks->evaluator.add_const_inplace(cos_rtn, 0.125 / scale_for_eval * 0.5);
 
-  inverse_sin_polynomial_v1.homomorphic_poly_evaluation(ckks,sin_rtn, sin_tmp2);
+  inverse_sin_polynomial_v1.homomorphic_poly_evaluation(ckks, sin_rtn, sin_tmp2);
   // inverse_sin_polynomial_v1.homomorphic_poly_evaluation_naive(context, encoder, encryptor, evaluator, relin_keys, sin_rtn, sin_tmp2, decryptor);
   ckks->evaluator.mod_switch_to_next_inplace(sin_rtn);
 
   // cout << "cos result scale = " << cos_rtn.scale() << endl;
   // cout << "sin result scale = " << sin_rtn.scale() << endl;
-  
+
   const auto &context_data = ckks->context->get_context_data(sin_rtn.params_id());
   const auto &modulus = context_data.parms().coeff_modulus();
   int64_t ql = (*modulus.rbegin()).value();
@@ -391,4 +414,10 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
   ckks->evaluator.rescale_to_next_inplace(sin_rtn);
   sin_rtn.scale() = cos_rtn.scale();
   ckks->evaluator.add(sin_rtn, cos_rtn, rtn);
+
+  // Compensate the fixed ReLU scaling using the measured factor.
+  ckks->evaluator.multiply_const_inplace(rtn, 3.600386);
+  ckks->evaluator.rescale_to_next_inplace(rtn);
+
+  
 }
