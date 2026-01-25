@@ -230,6 +230,14 @@ static PhantomCiphertext evalConv_BN(const PhantomContext &context,
     vector<PhantomPlaintext> plain_idx = gen_idxNlogs(context, encoder);
     int logN = static_cast<int>(round(log2(static_cast<double>(context.key_context_data().parms().poly_modulus_degree()))));
 
+    for(int i = 0;i<pl_ker.size();i++)
+    {
+        ckks_evaluator.evaluator.mod_switch_to_inplace(pl_ker[i],20);
+    }
+    for(int i = 0;i<plain_idx;i++)
+    {
+        ckks_evaluator.evaluator.mod_switch_to_inplace(plain_idx[i],20);
+    }
     PhantomCiphertext ct_conv = conv_then_pack(context, ckks_evaluator, ct_input, pl_ker,
                                                plain_idx, max_batch, norm, out_scale, logN);
     double pack_factor = static_cast<double>(max_batch / norm);

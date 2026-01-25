@@ -237,6 +237,7 @@ int main() {
 
     PhantomCiphertext ct_input;
     ckks_evaluator.encryptor.encrypt(pt_input, ct_input);
+    ckks_evaluator.evaluator.mod_switch_to_inplace(ct_input,20);
 
     cout << "poly_modulus_degree: " << poly_modulus_degree
          << ", logN: " << logN << endl;
