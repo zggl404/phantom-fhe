@@ -250,6 +250,7 @@ static PhantomCiphertext evalConv_BN(const PhantomContext &context,
 
 static PhantomCiphertext relu_coeff(const PhantomContext &context,
                                     CKKSEvaluator &ckks_evaluator,
+                                    PhantomCKKSEncoder &encoder,
                                     Bootstrapper &bootstrapper,
                                     const PhantomCiphertext &ct_in,
                                     bool debug) {
@@ -389,7 +390,7 @@ PhantomCiphertext evalConv_BNRelu_new(
     bootstrapper.slot_vec.push_back(logn);
     bootstrapper.generate_LT_coefficient_3();
 
-    return relu_coeff(context, ckks_evaluator, bootstrapper, ct_conv, debug);
+    return relu_coeff(context, ckks_evaluator, encoder, bootstrapper, ct_conv, debug);
 }
 
 } // namespace phantom
