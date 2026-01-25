@@ -121,7 +121,7 @@ void PhantomPublicKey::encrypt_zero_asymmetric_internal(const PhantomContext &co
     {
         uint64_t *cx_i = temp_cipher.data() + i * poly_degree * (coeff_mod_size + size_P);
         uint64_t *ct_i = cipher.data() + i * poly_degree * coeff_mod_size;
-        context.get_context_data(1).gpu_rns_tool().moddown(
+        context.get_context_data(chain_index).gpu_rns_tool().moddown(
             ct_i, cx_i, context.gpu_rns_tables(), parms.scheme(), stream);
     }
 

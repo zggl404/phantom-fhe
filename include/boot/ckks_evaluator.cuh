@@ -1,6 +1,7 @@
 #pragma once
 
 #include <complex>
+#include <stdexcept>
 
 #include "phantom.h"
 
@@ -149,7 +150,6 @@ namespace phantom
     {
       dest = ::rescale_to_next(*context, ct);
     }
-    
 
     // Relinearization
     inline void relinearize_inplace(PhantomCiphertext &ct, const PhantomRelinKey &relin_keys)
@@ -266,7 +266,7 @@ namespace phantom
     }
 
     // Rotation
-    inline void rotate_vector( PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest)
+    inline void rotate_vector(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest)
     {
       dest = ::rotate(*context, ct, steps, galois_keys);
       cudaStreamSynchronize(ct.data_ptr().get_stream()); // this is currently required, rotation is unstable
@@ -365,6 +365,16 @@ namespace phantom
       multiply_const_inplace(dest, value);
     }
 
+    inline void multiply_const_raw_inplace(PhantomCiphertext &ct, double value)
+    {
+      PhantomPlaintext const_plain;
+
+      vector<double> values(encoder->slot_count(), value);
+      encoder->encode(*context, values, 1.0, const_plain);
+      mod_switch_to_inplace(const_plain, ct.params_id());
+      multiply_plain_inplace(ct, const_plain);
+    }
+
     inline void multiply_const_inplace(PhantomCiphertext &ct, double value)
     {
       PhantomPlaintext const_plain;
@@ -373,6 +383,21 @@ namespace phantom
       encoder->encode(*context, values, ct.scale(), const_plain);
       mod_switch_to_inplace(const_plain, ct.params_id());
       multiply_plain_inplace(ct, const_plain);
+    }
+
+    // Set scale by scaling the ciphertext values and consuming one level.
+    inline void set_scale_inplace(PhantomCiphertext &ct, double scale)
+    {
+      
+      
+      rescale_to_next_inplace(ct);
+      const auto &context_data = context->get_context_data(ct.params_id());
+      const auto &modulus = context_data.parms().coeff_modulus();
+      int64_t ql = (*modulus.rbegin()).value();
+      multiply_const_inplace(ct, scale * ql / ct.scale() / ct.scale());
+      rescale_to_next_inplace(ct);
+      ct.set_scale(scale);
+
     }
 
     inline void add_const(PhantomCiphertext &ct, double value, PhantomCiphertext &dest)
@@ -575,4 +600,3 @@ namespace phantom
   };
 
 } // namespace [phantom]
-

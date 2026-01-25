@@ -202,7 +202,9 @@ static PhantomCiphertext conv_then_pack(const PhantomContext &context,
     for (int i = 0; i < max_ob; i++) {
         if (i % norm == 0) {
             ckks_evaluator.evaluator.multiply_plain(ctxt_in, pl_ker[i], ctxt_out[i]);
-            ctxt_out[i].set_scale(out_scale / static_cast<double>(max_ob / norm));
+            //ctxt_out[i].set_scale(out_scale / static_cast<double>(max_ob / norm));
+            ckks_evaluator.evaluator.set_scale_inplace(
+            ctxt_out[i], out_scale / static_cast<double>(max_ob / norm));
         }
     }
 
@@ -240,8 +242,7 @@ static PhantomCiphertext evalConv_BN(const PhantomContext &context,
     }
     PhantomCiphertext ct_conv = conv_then_pack(context, ckks_evaluator, ct_input, pl_ker,
                                                plain_idx, max_batch, norm, out_scale, logN);
-    double pack_factor = static_cast<double>(max_batch / norm);
-    ct_conv.set_scale(ct_conv.scale() * pack_factor);
+    
 
     vector<double> b_coeffs(context.key_context_data().parms().poly_modulus_degree(), 0.0);
     for (int i = 0; i < real_ib; i++) {
@@ -359,11 +360,10 @@ PhantomCiphertext evalConv_BNRelu_new(
         throw invalid_argument("evalConv_BNRelu_new: unsupported kind");
     }
     
-    double out_scale = ct_input.scale() * ct_input.scale();
+    double out_scale = ct_input.scale();
     PhantomCiphertext ct_conv = evalConv_BN(context, ckks_evaluator, encoder, ct_input,
                                             ker_in, bn_a, bn_b, in_wid, ker_wid,
                                             real_ib, real_ob, norm, out_scale, trans);
-    ckks_evaluator.evaluator.rescale_to_next_inplace(ct_conv);
     if (debug) {
         cout << "[conv] ct_conv scale(log2): " << log2_scale(ct_conv.scale())
              << ", chain_index: " << ct_conv.chain_index() << endl;

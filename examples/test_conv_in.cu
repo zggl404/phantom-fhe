@@ -15,15 +15,20 @@ static vector<double> prep_input(const vector<double> &input,
                                  int raw_in_wid,
                                  int in_wid,
                                  int N,
-                                 int norm) {
+                                 int norm)
+{
     vector<double> out(N, 0.0);
     int batch = N / (in_wid * in_wid);
     int k = 0;
 
-    for (int i = 0; i < in_wid; i++) {
-        for (int j = 0; j < in_wid; j++) {
-            for (int b = 0; b < batch / norm; b++) {
-                if (i < raw_in_wid && j < raw_in_wid) {
+    for (int i = 0; i < in_wid; i++)
+    {
+        for (int j = 0; j < in_wid; j++)
+        {
+            for (int b = 0; b < batch / norm; b++)
+            {
+                if (i < raw_in_wid && j < raw_in_wid)
+                {
                     out[i * in_wid * batch + j * batch + b * norm] = input[k];
                     k++;
                 }
@@ -34,22 +39,28 @@ static vector<double> prep_input(const vector<double> &input,
     return out;
 }
 
-static vector<double> read_csv_floats(const string &path) {
+static vector<double> read_csv_floats(const string &path)
+{
     ifstream in(path);
-    if (!in.is_open()) {
+    if (!in.is_open())
+    {
         throw invalid_argument("failed to open file: " + path);
     }
 
     vector<double> values;
     string line;
-    while (getline(in, line)) {
-        if (line.empty()) {
+    while (getline(in, line))
+    {
+        if (line.empty())
+        {
             continue;
         }
         string token;
         stringstream ss(line);
-        while (getline(ss, token, ',')) {
-            if (token.empty()) {
+        while (getline(ss, token, ','))
+        {
+            if (token.empty())
+            {
                 continue;
             }
             values.push_back(stod(token));
@@ -60,13 +71,17 @@ static vector<double> read_csv_floats(const string &path) {
 
 static vector<double> post_process(const vector<double> &in_cfs,
                                    int raw_in_wid,
-                                   int in_wid) {
+                                   int in_wid)
+{
     int batch = static_cast<int>(in_cfs.size()) / (in_wid * in_wid);
     vector<double> out(raw_in_wid * raw_in_wid * batch, 0.0);
 
-    for (int i = 0; i < raw_in_wid; i++) {
-        for (int j = 0; j < raw_in_wid; j++) {
-            for (int b = 0; b < batch; b++) {
+    for (int i = 0; i < raw_in_wid; i++)
+    {
+        for (int j = 0; j < raw_in_wid; j++)
+        {
+            for (int b = 0; b < batch; b++)
+            {
                 out[i * raw_in_wid * batch + batch * j + b] =
                     in_cfs[i * in_wid * batch + batch * j + b];
             }
@@ -79,17 +94,24 @@ static vector<double> post_process(const vector<double> &in_cfs,
 static vector<vector<double>> reshape_ker(const vector<double> &ker_in,
                                           int k_sz,
                                           int out_batch,
-                                          bool trans) {
+                                          bool trans)
+{
     vector<vector<double>> ker_out(out_batch, vector<double>(k_sz * (static_cast<int>(ker_in.size()) / (k_sz * out_batch)), 0.0));
     int in_batch = static_cast<int>(ker_in.size()) / (k_sz * out_batch);
 
-    for (int i = 0; i < out_batch; i++) {
-        for (int j = 0; j < in_batch; j++) {
-            for (int k = 0; k < k_sz; k++) {
-                if (trans) {
+    for (int i = 0; i < out_batch; i++)
+    {
+        for (int j = 0; j < in_batch; j++)
+        {
+            for (int k = 0; k < k_sz; k++)
+            {
+                if (trans)
+                {
                     ker_out[i][j * k_sz + (k_sz - 1 - k)] =
                         ker_in[j + i * in_batch + k * out_batch * in_batch];
-                } else {
+                }
+                else
+                {
                     ker_out[i][j * k_sz + k] =
                         ker_in[i + j * out_batch + k * out_batch * in_batch];
                 }
@@ -105,14 +127,17 @@ static vector<double> encode_ker_final(const vector<vector<double>> &ker_in,
                                        int i,
                                        int in_wid,
                                        int in_batch,
-                                       int ker_wid) {
+                                       int ker_wid)
+{
     int vec_size = in_wid * in_wid * in_batch;
     vector<double> output(vec_size, 0.0);
     int bias = pos * ker_wid * ker_wid * in_batch;
     int k_sz = ker_wid * ker_wid;
 
-    for (int j = 0; j < in_batch; j++) {
-        for (int k = 0; k < k_sz; k++) {
+    for (int j = 0; j < in_batch; j++)
+    {
+        for (int k = 0; k < k_sz; k++)
+        {
             output[(in_wid * (k / ker_wid) + k % ker_wid) * in_batch + j] =
                 ker_in[i][(in_batch - 1 - j) * k_sz + (k_sz - 1 - k) + bias];
         }
@@ -120,14 +145,17 @@ static vector<double> encode_ker_final(const vector<vector<double>> &ker_in,
 
     int adj = (in_batch - 1) + (in_batch) * (in_wid + 1) * (ker_wid - 1) / 2;
     vector<double> tmp(adj, 0.0);
-    for (int idx = 0; idx < adj; idx++) {
+    for (int idx = 0; idx < adj; idx++)
+    {
         tmp[idx] = output[vec_size - adj + idx];
         output[vec_size - adj + idx] = -output[idx];
     }
-    for (int idx = 0; idx < vec_size - 2 * adj; idx++) {
+    for (int idx = 0; idx < vec_size - 2 * adj; idx++)
+    {
         output[idx] = output[idx + adj];
     }
-    for (int idx = 0; idx < adj; idx++) {
+    for (int idx = 0; idx < adj; idx++)
+    {
         output[idx + vec_size - 2 * adj] = tmp[idx];
     }
 
@@ -145,21 +173,27 @@ static vector<PhantomPlaintext> prep_ker(const PhantomContext &context,
                                          int norm,
                                          int pos,
                                          bool trans,
-                                         double scale) {
+                                         double scale)
+{
     int max_bat = static_cast<int>(context.key_context_data().parms().poly_modulus_degree()) / (in_wid * in_wid);
     int ker_size = ker_wid * ker_wid;
     vector<vector<double>> ker_rs = reshape_ker(ker_in, ker_size, real_ob, trans);
 
-    for (int i = 0; i < real_ob; i++) {
-        for (size_t j = 0; j < ker_rs[i].size(); j++) {
+    for (int i = 0; i < real_ob; i++)
+    {
+        for (size_t j = 0; j < ker_rs[i].size(); j++)
+        {
             ker_rs[i][j] *= bn_a[i];
         }
     }
 
     vector<vector<double>> max_ker_rs(max_bat, vector<double>(max_bat * ker_size, 0.0));
-    for (int i = 0; i < real_ob; i++) {
-        for (int j = 0; j < real_ib; j++) {
-            for (int k = 0; k < ker_size; k++) {
+    for (int i = 0; i < real_ob; i++)
+    {
+        for (int j = 0; j < real_ib; j++)
+        {
+            for (int k = 0; k < ker_size; k++)
+            {
                 max_ker_rs[norm * i][norm * j * ker_size + k] =
                     ker_rs[i][j * ker_size + k];
             }
@@ -167,26 +201,29 @@ static vector<PhantomPlaintext> prep_ker(const PhantomContext &context,
     }
 
     vector<PhantomPlaintext> pl_ker(max_bat);
-    for (int i = 0; i < max_bat; i++) {
+    for (int i = 0; i < max_bat; i++)
+    {
         encoder.encode_coeffs(context,
                               encode_ker_final(max_ker_rs, pos, i, in_wid, max_bat, ker_wid),
                               scale,
-                              pl_ker[i]);
+                              pl_ker[i],1);
     }
 
     return pl_ker;
 }
 
 static vector<PhantomPlaintext> gen_idxNlogs(const PhantomContext &context,
-                                             PhantomCKKSEncoder &encoder) {
+                                             PhantomCKKSEncoder &encoder)
+{
     size_t N = context.key_context_data().parms().poly_modulus_degree();
     int logN = static_cast<int>(round(log2(static_cast<double>(N))));
     vector<PhantomPlaintext> idx(logN);
     vector<double> coeffs(N, 0.0);
 
-    for (int i = 0; i < logN; i++) {
+    for (int i = 0; i < logN; i++)
+    {
         coeffs[1 << i] = 1.0;
-        encoder.encode_coeffs(context, coeffs, 1.0, idx[i]);
+        encoder.encode_coeffs(context, coeffs, 1.0, idx[i], 3);
         coeffs[1 << i] = 0.0;
     }
 
@@ -198,28 +235,32 @@ static PhantomCiphertext pack_ctxts(CKKSEvaluator &ckks_evaluator,
                                     int max_cnum,
                                     int real_cnum,
                                     const vector<PhantomPlaintext> &idx,
-                                    int logN) {
+                                    int logN)
+{
     int norm = max_cnum / real_cnum;
     vector<PhantomCiphertext> ctxts(max_cnum);
-
-    for (int i = 0; i < max_cnum; i++) {
-        if (i % norm == 0) {
+    for (int i = 0; i < max_cnum; i++)
+    {
+        if (i % norm == 0)
+        {
             ctxts[i] = ctxts_in[i];
-            // Match Lattigo's packing scale normalization.
             ctxts[i].set_scale(ctxts[i].scale() * static_cast<double>(real_cnum));
         }
     }
 
     int step = max_cnum / 2;
     int logStep = 0;
-    for (int i = step; i > 1; i /= 2) {
+    for (int i = step; i > 1; i /= 2)
+    {
         logStep++;
     }
     int j = logN - logStep;
 
     PhantomCiphertext tmp1, tmp2, rot;
-    for (; step >= norm; step /= 2) {
-        for (int i = 0; i < step; i += norm) {
+    for (; step >= norm; step /= 2)
+    {
+        for (int i = 0; i < step; i += norm)
+        {
             ckks_evaluator.evaluator.multiply_plain(ctxts[i + step], idx[logStep], tmp1);
             ckks_evaluator.evaluator.sub(ctxts[i], tmp1, tmp2);
             ckks_evaluator.evaluator.add(ctxts[i], tmp1, tmp1);
@@ -236,20 +277,27 @@ static PhantomCiphertext pack_ctxts(CKKSEvaluator &ckks_evaluator,
 
 static PhantomCiphertext conv_then_pack(const PhantomContext &context,
                                         CKKSEvaluator &ckks_evaluator,
+                                        PhantomCKKSEncoder &encoder,
                                         const PhantomCiphertext &ctxt_in,
                                         const vector<PhantomPlaintext> &pl_ker,
                                         const vector<PhantomPlaintext> &plain_idx,
                                         int max_ob,
                                         int norm,
                                         double out_scale,
-                                        int logN) {
+                                        int logN)
+{
     vector<PhantomCiphertext> ctxt_out(max_ob);
 
-    for (int i = 0; i < max_ob; i++) {
-        if (i % norm == 0) {
-            ckks_evaluator.evaluator.multiply_plain(ctxt_in, pl_ker[i], ctxt_out[i]);
-            // Match Lattigo's packing scale normalization.
-            ctxt_out[i].set_scale(out_scale / static_cast<double>(max_ob / norm));
+    for (int i = 0; i < max_ob; i++)
+    {
+        if (i % norm == 0)
+        {
+            ckks_evaluator.evaluator.multiply_plain(ctxt_in, pl_ker[i], ctxt_out[i]); 
+            
+            ckks_evaluator.evaluator.set_scale_inplace(
+            ctxt_out[i], out_scale / static_cast<double>(max_ob / norm));
+            //ctxt_out[i].scale() = out_scale / static_cast<double>(max_ob / norm)
+
         }
     }
 
@@ -264,27 +312,37 @@ static vector<double> cpu_conv_ref(const vector<double> &raw_input,
                                    int in_wid,
                                    int ker_wid,
                                    int real_ib,
-                                   int real_ob) {
+                                   int real_ob)
+{
     int k_sz = ker_wid * ker_wid;
     vector<vector<double>> ker_rs = reshape_ker(ker_in, k_sz, real_ob, false);
 
     vector<double> out(raw_in_wid * raw_in_wid * real_ob, 0.0);
-    for (int ob = 0; ob < real_ob; ob++) {
-        for (int idx = 0; idx < k_sz * real_ib; idx++) {
+    for (int ob = 0; ob < real_ob; ob++)
+    {
+        for (int idx = 0; idx < k_sz * real_ib; idx++)
+        {
             ker_rs[ob][idx] *= bn_a[ob];
         }
     }
 
-    for (int ob = 0; ob < real_ob; ob++) {
-        for (int i = 0; i < raw_in_wid; i++) {
-            for (int j = 0; j < raw_in_wid; j++) {
+    for (int ob = 0; ob < real_ob; ob++)
+    {
+        for (int i = 0; i < raw_in_wid; i++)
+        {
+            for (int j = 0; j < raw_in_wid; j++)
+            {
                 double acc = 0.0;
-                for (int ib = 0; ib < real_ib; ib++) {
-                    for (int ki = 0; ki < ker_wid; ki++) {
-                        for (int kj = 0; kj < ker_wid; kj++) {
+                for (int ib = 0; ib < real_ib; ib++)
+                {
+                    for (int ki = 0; ki < ker_wid; ki++)
+                    {
+                        for (int kj = 0; kj < ker_wid; kj++)
+                        {
                             int ii = i + ki - ker_wid / 2;
                             int jj = j + kj - ker_wid / 2;
-                            if (ii < 0 || jj < 0 || ii >= raw_in_wid || jj >= raw_in_wid) {
+                            if (ii < 0 || jj < 0 || ii >= raw_in_wid || jj >= raw_in_wid)
+                            {
                                 continue;
                             }
                             double in_val = raw_input[ib + real_ib * (jj + raw_in_wid * ii)];
@@ -302,7 +360,8 @@ static vector<double> cpu_conv_ref(const vector<double> &raw_input,
     return out;
 }
 
-int main() {
+int main()
+{
     const string data_dir = "data/test_conv_data";
     int ker_wid = 3;
     int raw_in_batch = 16;
@@ -317,33 +376,39 @@ int main() {
     vector<double> real_out = read_csv_floats(prefix + "out_" + to_string(test_iter) + ".csv");
 
     int raw_in_wid = static_cast<int>(round(sqrt(static_cast<double>(raw_input.size() / raw_in_batch))));
-    if (raw_in_wid * raw_in_wid * raw_in_batch != static_cast<int>(raw_input.size())) {
+    if (raw_in_wid * raw_in_wid * raw_in_batch != static_cast<int>(raw_input.size()))
+    {
         throw invalid_argument("raw_input size mismatch");
     }
     int in_wid = raw_in_wid + ker_wid / 2;
     int ker_size = ker_wid * ker_wid;
     int raw_out_batch = static_cast<int>(ker_in.size()) / (ker_size * raw_in_batch);
-    if (ker_size * raw_in_batch * raw_out_batch != static_cast<int>(ker_in.size())) {
+    if (ker_size * raw_in_batch * raw_out_batch != static_cast<int>(ker_in.size()))
+    {
         throw invalid_argument("ker_in size mismatch");
     }
-    if (static_cast<int>(bn_a.size()) != raw_out_batch) {
+    if (static_cast<int>(bn_a.size()) != raw_out_batch)
+    {
         throw invalid_argument("bn_a size mismatch");
     }
-    if (static_cast<int>(bn_b.size()) != raw_out_batch) {
+    if (static_cast<int>(bn_b.size()) != raw_out_batch)
+    {
         throw invalid_argument("bn_b size mismatch");
     }
-    if (static_cast<int>(real_out.size()) != raw_in_wid * raw_in_wid * raw_in_batch) {
+    if (static_cast<int>(real_out.size()) != raw_in_wid * raw_in_wid * raw_in_batch)
+    {
         throw invalid_argument("real_out size mismatch");
     }
 
     size_t poly_modulus_degree = static_cast<size_t>(in_wid * in_wid * raw_in_batch);
+    std::cout<<"the poly degree is "<<poly_modulus_degree<<std::endl;
     double scale = pow(2.0, 40);
-    double out_scale = scale * scale;
 
+    double out_scale = scale;
     EncryptionParameters parms(scheme_type::ckks);
     parms.set_poly_modulus_degree(poly_modulus_degree);
     parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(
-        poly_modulus_degree, {60, 40, 40, 60}));
+        poly_modulus_degree, {60, 40, 40, 40, 40, 60}));
 
     PhantomContext context(parms);
     PhantomCKKSEncoder encoder(context);
@@ -357,7 +422,8 @@ int main() {
 
     int logN = static_cast<int>(round(log2(static_cast<double>(poly_modulus_degree))));
     vector<uint32_t> elts;
-    for (int i = 0; i < logN; i++) {
+    for (int i = 0; i < logN; i++)
+    {
         elts.push_back((1u << (i + 1)) + 1);
     }
     ckks_evaluator.decryptor.create_galois_keys_from_elts(elts, *(ckks_evaluator.galois_keys));
@@ -380,30 +446,22 @@ int main() {
                                                raw_out_batch, norm, 0, false, scale);
 
     vector<PhantomPlaintext> plain_idx = gen_idxNlogs(context, encoder);
-    cout << "ct_input scale: " << ct_input.scale()
-         << ", pl_ker[0] scale: " << pl_ker[0].scale() << endl;
-    cout << "expected scale factor (ct*ker/out): "
-         << (ct_input.scale() * pl_ker[0].scale()) / out_scale << endl;
-
-    PhantomCiphertext ct_conv = conv_then_pack(context, ckks_evaluator, ct_input,
+    PhantomCiphertext ct_conv = conv_then_pack(context, ckks_evaluator, encoder, ct_input,
                                                pl_ker, plain_idx, max_batch,
                                                norm, out_scale, logN);
-    cout << "ct_conv scale after pack: " << ct_conv.scale()
-         << ", chain_index: " << ct_conv.chain_index() << endl;
-    double pack_factor = static_cast<double>(max_batch / norm);
-    ct_conv.set_scale(ct_conv.scale() * pack_factor);
-    cout << "ct_conv scale after pack adjust: " << ct_conv.scale() << endl;
-
+    std::cout << "the scale of ct_conv is " << log2(ct_conv.scale()) << std::endl;
+    //ckks_evaluator.evaluator.rescale_to_next_inplace(ct_conv);
+    //ct_conv.scale() = std::pow(2, 80);
     vector<double> b_coeffs(poly_modulus_degree, 0.0);
-    for (int i = 0; i < real_batch; i++) {
-        for (int j = 0; j < in_wid * in_wid; j++) {
+    for (int i = 0; i < real_batch; i++)
+    {
+        for (int j = 0; j < in_wid * in_wid; j++)
+        {
             b_coeffs[norm * i + j * max_batch] = bn_b[i];
         }
     }
     PhantomPlaintext pt_bn_b;
     encoder.encode_coeffs(context, b_coeffs, ct_conv.scale(), pt_bn_b, ct_conv.chain_index());
-    cout << "pt_bn_b scale: " << pt_bn_b.scale()
-         << ", chain_index: " << pt_bn_b.chain_index() << endl;
     ckks_evaluator.evaluator.add_plain_inplace(ct_conv, pt_bn_b);
 
     PhantomPlaintext pt_out;
@@ -418,26 +476,31 @@ int main() {
                                            real_batch, raw_out_batch);
 
     double max_error = 0.0;
-    for (size_t i = 0; i < expected.size(); i++) {
+    for (size_t i = 0; i < expected.size(); i++)
+    {
         max_error = max(max_error, fabs(test_out[i] - expected[i]));
     }
     double max_error_real = 0.0;
-    for (size_t i = 0; i < real_out.size(); i++) {
+    for (size_t i = 0; i < real_out.size(); i++)
+    {
         max_error_real = max(max_error_real, fabs(test_out[i] - real_out[i]));
     }
 
     cout << "Max error: " << max_error << endl;
     cout << "Max error vs real_out: " << max_error_real << endl;
     cout << "First 8 coeffs (decoded): ";
-    for (size_t i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 8; i++)
+    {
         cout << test_out[i] << (i + 1 == 8 ? "\n" : ", ");
     }
     cout << "First 8 coeffs (expected): ";
-    for (size_t i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 8; i++)
+    {
         cout << expected[i] << (i + 1 == 8 ? "\n" : ", ");
     }
     cout << "First 8 coeffs (real_out): ";
-    for (size_t i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 8; i++)
+    {
         cout << real_out[i] << (i + 1 == 8 ? "\n" : ", ");
     }
 

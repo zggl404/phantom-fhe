@@ -220,7 +220,6 @@ int main() {
                                  &encoder, &relin_keys, &galois_keys, scale);
 
     vector<uint32_t> elts;
-    std::cout<<"the log N is"<<logN<<std::endl;
     for (int i = 0; i < logN; i++) {
         elts.push_back((1u << (i + 1)) + 1);
     }
@@ -233,24 +232,11 @@ int main() {
     vector<double> input_coeffs = prep_input(raw_input, raw_in_wid, in_wid,
                                              static_cast<int>(poly_modulus_degree), norm);
     PhantomPlaintext pt_input;
-    encoder.encode_coeffs(context, input_coeffs, scale, pt_input,20);
+    encoder.encode_coeffs(context, input_coeffs, scale, pt_input);
 
     PhantomCiphertext ct_input;
     ckks_evaluator.encryptor.encrypt(pt_input, ct_input);
     ckks_evaluator.evaluator.mod_switch_to_inplace(ct_input,20);
-
-    cout << "poly_modulus_degree: " << poly_modulus_degree
-         << ", logN: " << logN << endl;
-    cout << "ct_input scale(log2): " << std::log2(ct_input.scale())
-         << ", chain_index: " << ct_input.chain_index() << endl;
-    PhantomPlaintext pt_input_debug;
-    ckks_evaluator.decryptor.decrypt(ct_input, pt_input_debug);
-    vector<double> input_decoded;
-    encoder.decode_coeffs(context, pt_input_debug, input_decoded);
-    cout << "ct_input coeffs (first 8): ";
-    for (size_t i = 0; i < 8; i++) {
-        cout << input_decoded[i] << (i + 1 == 8 ? "\n" : ", ");
-    }
 
     PhantomCiphertext ct_out = evalConv_BNRelu_new(
         context,
@@ -274,10 +260,7 @@ int main() {
         0,
         "Conv",
         false,
-        true);
-
-    cout << "ct_out scale(log2): " << std::log2(ct_out.scale())
-         << ", chain_index: " << ct_out.chain_index() << endl;
+        false);
 
     PhantomPlaintext pt_out;
     ckks_evaluator.decryptor.decrypt(ct_out, pt_out);
@@ -285,19 +268,7 @@ int main() {
     vector<double> decoded;
     encoder.decode_coeffs(context, pt_out, decoded);
     vector<double> test_out = post_process(decoded, raw_in_wid, in_wid);
-    cout << "ct_out coeffs (first 8): ";
-    for (size_t i = 0; i < 8; i++) {
-        cout << decoded[i] << (i + 1 == 8 ? "\n" : ", ");
-    }
-
     vector<double> expected = real_out;
-
-    auto expected_mm = minmax_element(expected.begin(), expected.end());
-    auto output_mm = minmax_element(test_out.begin(), test_out.end());
-    cout << "expected min/max: " << *expected_mm.first
-         << ", " << *expected_mm.second << endl;
-    cout << "output min/max: " << *output_mm.first
-         << ", " << *output_mm.second << endl;
 
     double max_error = 0.0;
     for (size_t i = 0; i < expected.size(); i++) {
