@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <vector>
 
 #include "boot/Bootstrapper.cuh"
@@ -88,12 +89,12 @@ int main()
     bootstrapper.generate_LT_coefficient_3();
 
     vector<double> coeffs(poly_modulus_degree, 0.0);
+    random_device rd;
+    mt19937_64 rng(rd());
+    uniform_real_distribution<double> dist(-1.0, 1.0);
     for (size_t i = 0; i < coeffs.size(); i++)
     {
-        coeffs[i] = 1;
-        if(i%2==0){
-            coeffs[i] = -coeffs[i];
-        }
+        coeffs[i] = dist(rng);
     }
 
     PhantomPlaintext pt;
@@ -101,7 +102,9 @@ int main()
 
     PhantomCiphertext ct;
     ckks_evaluator.encryptor.encrypt(pt, ct);
-
+    ckks_evaluator.evaluator.multiply_const_inplace(ct,4*0.88);
+    ckks_evaluator.evaluator.rescale_to_next_inplace(ct);
+    
     while (ct.coeff_modulus_size() > 1)
     {
         ckks_evaluator.evaluator.mod_switch_to_next_inplace(ct);
@@ -156,10 +159,11 @@ int main()
     vector<double> decoded;
     encoder.decode_coeffs(context, pt_out, decoded);
 
+    auto relu = [](double x) { return x > 0.0 ? x : 0.0; };
     double max_error = 0.0;
     for (size_t i = 0; i < coeffs.size(); i++)
     {
-        max_error = max(max_error, fabs(decoded[i] - coeffs[i]));
+        max_error = max(max_error, fabs(decoded[i] - relu(coeffs[i])));
     }
 
     cout << "Max error: " << max_error << endl;
@@ -171,7 +175,7 @@ int main()
     cout << "Expected (first 8): ";
     for (size_t i = 0; i < 8; i++)
     {
-        cout << coeffs[i] << (i + 1 == 8 ? "\n" : ", ");
+        cout << relu(coeffs[i]) << (i + 1 == 8 ? "\n" : ", ");
     }
 
     return 0;

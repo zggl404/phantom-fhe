@@ -415,9 +415,6 @@ void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphe
   sin_rtn.scale() = cos_rtn.scale();
   ckks->evaluator.add(sin_rtn, cos_rtn, rtn);
 
-  // Compensate the fixed ReLU scaling using the measured factor.
-  ckks->evaluator.multiply_const_inplace(rtn, 3.600386);
-  ckks->evaluator.rescale_to_next_inplace(rtn);
-
+  
   
 }
