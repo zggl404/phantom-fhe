@@ -314,6 +314,12 @@ PhantomCiphertext evalConv_BNRelu_new(
     if (debug) {
         cout << "[conv] ct_conv scale: " << ct_conv.scale()
              << ", chain_index: " << ct_conv.chain_index() << endl;
+        PhantomPlaintext pt_conv;
+        ckks_evaluator.decryptor.decrypt(ct_conv, pt_conv);
+        vector<double> coeffs_conv;
+        encoder.decode_coeffs(context, pt_conv, coeffs_conv);
+        cout << "[conv] ct_conv coeffs (first 8): ";
+        print_first_n(coeffs_conv, 8);
     }
 
     long logN = static_cast<long>(round(log2(static_cast<double>(context.key_context_data().parms().poly_modulus_degree()))));

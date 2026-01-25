@@ -242,6 +242,14 @@ int main() {
          << ", logN: " << logN << endl;
     cout << "ct_input scale: " << ct_input.scale()
          << ", chain_index: " << ct_input.chain_index() << endl;
+    PhantomPlaintext pt_input_debug;
+    ckks_evaluator.decryptor.decrypt(ct_input, pt_input_debug);
+    vector<double> input_decoded;
+    encoder.decode_coeffs(context, pt_input_debug, input_decoded);
+    cout << "ct_input coeffs (first 8): ";
+    for (size_t i = 0; i < 8; i++) {
+        cout << input_decoded[i] << (i + 1 == 8 ? "\n" : ", ");
+    }
 
     PhantomCiphertext ct_out = evalConv_BNRelu_new(
         context,
@@ -276,6 +284,10 @@ int main() {
     vector<double> decoded;
     encoder.decode_coeffs(context, pt_out, decoded);
     vector<double> test_out = post_process(decoded, raw_in_wid, in_wid);
+    cout << "ct_out coeffs (first 8): ";
+    for (size_t i = 0; i < 8; i++) {
+        cout << decoded[i] << (i + 1 == 8 ? "\n" : ", ");
+    }
 
     vector<double> expected = cpu_conv_ref(raw_input, ker_in, bn_a, bn_b,
                                            raw_in_wid, in_wid, ker_wid,
