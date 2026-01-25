@@ -486,8 +486,26 @@ int main()
         max_error_real = max(max_error_real, fabs(test_out[i] - real_out[i]));
     }
 
+    size_t split = min<size_t>(1024, test_out.size());
+    double max_error_first = 0.0;
+    double max_error_rest = 0.0;
+    for (size_t i = 0; i < test_out.size(); i++)
+    {
+        double err = fabs(test_out[i] - expected[i]);
+        if (i < split)
+        {
+            max_error_first = max(max_error_first, err);
+        }
+        else
+        {
+            max_error_rest = max(max_error_rest, err);
+        }
+    }
+
     cout << "Max error: " << max_error << endl;
     cout << "Max error vs real_out: " << max_error_real << endl;
+    cout << "Max error (cpu, first " << split << "): " << max_error_first << endl;
+    cout << "Max error (cpu, rest): " << max_error_rest << endl;
     cout << "First 8 coeffs (decoded): ";
     for (size_t i = 0; i < 8; i++)
     {
@@ -502,6 +520,13 @@ int main()
     for (size_t i = 0; i < 8; i++)
     {
         cout << real_out[i] << (i + 1 == 8 ? "\n" : ", ");
+    }
+
+    size_t report_n = min<size_t>(2000, test_out.size());
+    cout << "Index, computed, real_out, cpu_expected" << endl;
+    for (size_t i = 0; i < report_n; i++)
+    {
+        cout << i << ", " << test_out[i] << ", " << real_out[i] << ", " << expected[i] << endl;
     }
 
     return 0;

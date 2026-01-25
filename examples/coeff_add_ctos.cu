@@ -102,9 +102,7 @@ int main()
 
     PhantomCiphertext ct;
     ckks_evaluator.encryptor.encrypt(pt, ct);
-    ckks_evaluator.evaluator.multiply_const_inplace(ct,4*0.88);
-    ckks_evaluator.evaluator.rescale_to_next_inplace(ct);
-    
+
     while (ct.coeff_modulus_size() > 1)
     {
         ckks_evaluator.evaluator.mod_switch_to_next_inplace(ct);
@@ -117,7 +115,10 @@ int main()
 
     PhantomCiphertext ct_slot_1, ct_slot_2;
     bootstrapper.coefftoslot_full_3(ct_slot_1, ct_slot_2, ct_manual);
-
+    ckks_evaluator.evaluator.multiply_const_inplace(ct_slot_1, 4 * 0.9);
+    ckks_evaluator.evaluator.rescale_to_next_inplace(ct_slot_1);
+    ckks_evaluator.evaluator.multiply_const_inplace(ct_slot_2, 4 * 0.9);
+    ckks_evaluator.evaluator.rescale_to_next_inplace(ct_slot_2);
     PhantomCiphertext ct_red_1, ct_red_2;
     bootstrapper.mod_reducer->modular_reduction_relu(ct_red_1, ct_slot_1);
     bootstrapper.mod_reducer->modular_reduction_relu(ct_red_2, ct_slot_2);
@@ -159,7 +160,8 @@ int main()
     vector<double> decoded;
     encoder.decode_coeffs(context, pt_out, decoded);
 
-    auto relu = [](double x) { return x > 0.0 ? x : 0.0; };
+    auto relu = [](double x)
+    { return x > 0.0 ? x : 0.0; };
     double max_error = 0.0;
     for (size_t i = 0; i < coeffs.size(); i++)
     {

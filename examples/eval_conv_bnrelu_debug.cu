@@ -189,7 +189,7 @@ int main() {
     int log_special_prime = 51;
     int secret_key_hamming_weight = 192;
     int remaining_level = 3;
-    int boot_level = 3 + 6 + 2 + 1 + 7;
+    int boot_level = 3 + 6 + 2 + 1 + 7+1;
     int total_level = remaining_level + boot_level;
 
     vector<int> coeff_bit_vec;
@@ -237,6 +237,18 @@ int main() {
     PhantomCiphertext ct_input;
     ckks_evaluator.encryptor.encrypt(pt_input, ct_input);
     ckks_evaluator.evaluator.mod_switch_to_inplace(ct_input,20);
+    cout << "ct_input scale(log2): " << log2(ct_input.scale())
+         << ", chain_index: " << ct_input.chain_index() << endl;
+    {
+        PhantomPlaintext pt_input_debug;
+        ckks_evaluator.decryptor.decrypt(ct_input, pt_input_debug);
+        vector<double> input_decoded;
+        encoder.decode_coeffs(context, pt_input_debug, input_decoded);
+        cout << "ct_input coeffs (first 8): ";
+        for (size_t i = 0; i < 8; i++) {
+            cout << input_decoded[i] << (i + 1 == 8 ? "\n" : ", ");
+        }
+    }
 
     PhantomCiphertext ct_out = evalConv_BNRelu_new(
         context,
@@ -264,11 +276,22 @@ int main() {
 
     PhantomPlaintext pt_out;
     ckks_evaluator.decryptor.decrypt(ct_out, pt_out);
+    cout << "ct_out scale(log2): " << log2(ct_out.scale())
+         << ", chain_index: " << ct_out.chain_index() << endl;
 
     vector<double> decoded;
     encoder.decode_coeffs(context, pt_out, decoded);
     vector<double> test_out = post_process(decoded, raw_in_wid, in_wid);
     vector<double> expected = real_out;
+    vector<double> cpu_expected = cpu_conv_ref(raw_input, ker_in, bn_a, bn_b,
+                                               raw_in_wid, in_wid, ker_wid,
+                                               raw_in_batch, raw_out_batch);
+    auto expected_mm = minmax_element(expected.begin(), expected.end());
+    auto output_mm = minmax_element(test_out.begin(), test_out.end());
+    cout << "expected min/max: " << *expected_mm.first
+         << ", " << *expected_mm.second << endl;
+    cout << "output min/max: " << *output_mm.first
+         << ", " << *output_mm.second << endl;
 
     double max_error = 0.0;
     for (size_t i = 0; i < expected.size(); i++) {
@@ -283,6 +306,12 @@ int main() {
     cout << "Expected (first 8): ";
     for (size_t i = 0; i < 8; i++) {
         cout << expected[i] << (i + 1 == 8 ? "\n" : ", ");
+    }
+
+    size_t report_n = min<size_t>(2000, test_out.size());
+    cout << "Index, computed, real_out, cpu_expected" << endl;
+    for (size_t i = 0; i < report_n; i++) {
+        cout << i << ", " << test_out[i] << ", " << expected[i] << ", " << cpu_expected[i] << endl;
     }
 
     return 0;
