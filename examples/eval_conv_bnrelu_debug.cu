@@ -285,6 +285,13 @@ int main() {
         v = relu(v);
     }
 
+    auto expected_mm = minmax_element(expected.begin(), expected.end());
+    auto output_mm = minmax_element(test_out.begin(), test_out.end());
+    cout << "expected min/max: " << *expected_mm.first
+         << ", " << *expected_mm.second << endl;
+    cout << "output min/max: " << *output_mm.first
+         << ", " << *output_mm.second << endl;
+
     double max_error = 0.0;
     for (size_t i = 0; i < expected.size(); i++) {
         max_error = max(max_error, fabs(test_out[i] - expected[i]));

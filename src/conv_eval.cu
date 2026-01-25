@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <stdexcept>
 
 using namespace std;
@@ -228,7 +229,8 @@ static PhantomCiphertext evalConv_BN(const PhantomContext &context,
 static PhantomCiphertext relu_coeff(const PhantomContext &context,
                                     CKKSEvaluator &ckks_evaluator,
                                     Bootstrapper &bootstrapper,
-                                    const PhantomCiphertext &ct_in) {
+                                    const PhantomCiphertext &ct_in,
+                                    bool debug) {
     PhantomCiphertext ct_manual = ct_in;
     while (ct_manual.coeff_modulus_size() > 1) {
         ckks_evaluator.evaluator.mod_switch_to_next_inplace(ct_manual);
@@ -251,6 +253,20 @@ static PhantomCiphertext relu_coeff(const PhantomContext &context,
     PhantomCiphertext ct_out;
     bootstrapper.slottocoeff_full_3(ct_out, ct_red_1, ct_red_2);
     ct_out.set_scale(bootstrapper.final_scale);
+    if (debug) {
+        cout << "[relu] ct_manual scale: " << ct_manual.scale()
+             << ", chain_index: " << ct_manual.chain_index() << endl;
+        cout << "[relu] ct_slot_1 scale: " << ct_slot_1.scale()
+             << ", chain_index: " << ct_slot_1.chain_index() << endl;
+        cout << "[relu] ct_slot_2 scale: " << ct_slot_2.scale()
+             << ", chain_index: " << ct_slot_2.chain_index() << endl;
+        cout << "[relu] ct_red_1 scale: " << ct_red_1.scale()
+             << ", chain_index: " << ct_red_1.chain_index() << endl;
+        cout << "[relu] ct_red_2 scale: " << ct_red_2.scale()
+             << ", chain_index: " << ct_red_2.chain_index() << endl;
+        cout << "[relu] ct_out scale: " << ct_out.scale()
+             << ", chain_index: " << ct_out.chain_index() << endl;
+    }
     return ct_out;
 }
 
@@ -295,6 +311,10 @@ PhantomCiphertext evalConv_BNRelu_new(
                                             ker_in, bn_a, bn_b, in_wid, ker_wid,
                                             real_ib, real_ob, norm, out_scale, trans);
     ct_conv.set_scale(ct_conv.scale() * std::pow(2.0, pow));
+    if (debug) {
+        cout << "[conv] ct_conv scale: " << ct_conv.scale()
+             << ", chain_index: " << ct_conv.chain_index() << endl;
+    }
 
     long logN = static_cast<long>(round(log2(static_cast<double>(context.key_context_data().parms().poly_modulus_degree()))));
     long logn = logN - 1;
@@ -308,7 +328,7 @@ PhantomCiphertext evalConv_BNRelu_new(
     long inverse_deg = 127;
     long total_level = static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1;
 
-    Bootstrapper bootstrapper(loge, logn, logN - 1, total_level, ct_conv.scale(),
+    Bootstrapper bootstrapper(loge, logn, logN - 1, total_level, ct_input.scale(),
                               boundary_K, deg, scale_factor, inverse_deg, &ckks_evaluator);
     bootstrapper.prepare_mod_polynomial();
     vector<int> gal_steps_vector;
@@ -321,7 +341,7 @@ PhantomCiphertext evalConv_BNRelu_new(
     bootstrapper.slot_vec.push_back(logn);
     bootstrapper.generate_LT_coefficient_3();
 
-    return relu_coeff(context, ckks_evaluator, bootstrapper, ct_conv);
+    return relu_coeff(context, ckks_evaluator, bootstrapper, ct_conv, debug);
 }
 
 } // namespace phantom
