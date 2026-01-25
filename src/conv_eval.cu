@@ -497,16 +497,7 @@ namespace phantom
                                                 ker_in, bn_a, bn_b, in_wid, ker_wid,
                                                 real_ib, real_ob, norm, out_scale, trans);
 
-        long logN = static_cast<long>(round(log2(static_cast<double>(context.key_context_data().parms().poly_modulus_degree()))));
-        long logn = logN - 1;
-        if (log_sparse > 0)
-        {
-            logn = std::max(0L, logn - log_sparse);
-        }
         bootstrapper.final_scale = ct_conv.scale();
-        bootstrapper.slot_vec.clear();
-        bootstrapper.slot_vec.push_back(logn);
-        bootstrapper.generate_LT_coefficient_3();
 
         return relu_coeff(context, ckks_evaluator, encoder, bootstrapper, ct_conv, debug);
     }
