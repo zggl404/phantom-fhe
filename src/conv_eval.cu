@@ -205,13 +205,16 @@ namespace phantom
         vector<PhantomPlaintext> idx_sw = idx;
         for (size_t i = 0; i < idx_sw.size(); i++)
         {
-            ckks_evaluator.evaluator.mod_switch_to_inplace(idx_sw[i], static_cast<size_t>(22));
+            ckks_evaluator.evaluator.mod_switch_to_inplace(idx_sw[i], static_cast<size_t>(26));
         }
         PhantomCiphertext tmp1, tmp2, rot;
         for (; step >= norm; step /= 2)
         {
             for (int i = 0; i < step; i += norm)
             {
+                cout << "[pack] ctxt chain_index: " << ctxts[i + step].chain_index()
+                     << ", idx chain_index: " << idx_sw[logStep].chain_index() << endl;
+                cout << "[pack] apply_galois elt: " << ((1u << j) + 1) << endl;
                 ckks_evaluator.evaluator.multiply_plain(ctxts[i + step], idx_sw[logStep], tmp1);
                 ckks_evaluator.evaluator.sub(ctxts[i], tmp1, tmp2);
                 ckks_evaluator.evaluator.add(ctxts[i], tmp1, tmp1);
@@ -242,6 +245,8 @@ namespace phantom
         {
             if (i % norm == 0)
             {
+                cout << "[conv] ctxt_in chain_index: " << ctxt_in.chain_index()
+                     << ", pl_ker chain_index: " << pl_ker[i].chain_index() << endl;
                 ckks_evaluator.evaluator.multiply_plain(ctxt_in, pl_ker[i], ctxt_out[i]);
                 // ctxt_out[i].set_scale(out_scale / static_cast<double>(max_ob / norm));
                 ckks_evaluator.evaluator.set_scale_inplace(
@@ -276,11 +281,11 @@ namespace phantom
 
         for (int i = 0; i < pl_ker.size(); i++)
         {
-            ckks_evaluator.evaluator.mod_switch_to_inplace(pl_ker[i], 20);
+            ckks_evaluator.evaluator.mod_switch_to_inplace(pl_ker[i], 24);
         }
         for (int i = 0; i < plain_idx.size(); i++)
         {
-            ckks_evaluator.evaluator.mod_switch_to_inplace(plain_idx[i], 20);
+            ckks_evaluator.evaluator.mod_switch_to_inplace(plain_idx[i], 24);
         }
         PhantomCiphertext ct_conv = conv_then_pack(context, ckks_evaluator, ct_input, pl_ker,
                                                    plain_idx, max_batch, norm, out_scale, logN);
@@ -295,6 +300,8 @@ namespace phantom
         }
         PhantomPlaintext pt_bn_b;
         encoder.encode_coeffs(context, b_coeffs, ct_conv.scale(), pt_bn_b, ct_conv.chain_index());
+        cout << "[bn] ct_conv chain_index: " << ct_conv.chain_index()
+             << ", pt_bn_b chain_index: " << pt_bn_b.chain_index() << endl;
         ckks_evaluator.evaluator.add_plain_inplace(ct_conv, pt_bn_b);
 
         return ct_conv;
@@ -440,6 +447,64 @@ namespace phantom
         }
         bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
         ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
+        bootstrapper.slot_vec.push_back(logn);
+        bootstrapper.generate_LT_coefficient_3();
+
+        return relu_coeff(context, ckks_evaluator, encoder, bootstrapper, ct_conv, debug);
+    }
+
+    PhantomCiphertext evalConv_BNRelu_new_cached(
+        const PhantomContext &context,
+        CKKSEvaluator &ckks_evaluator,
+        PhantomCKKSEncoder &encoder,
+        Bootstrapper &bootstrapper,
+        const PhantomCiphertext &ct_input,
+        const vector<double> &ker_in,
+        const vector<double> &bn_a,
+        const vector<double> &bn_b,
+        double alpha,
+        double pow,
+        int in_wid,
+        int kp_wid,
+        int ker_wid,
+        int real_ib,
+        int real_ob,
+        int norm,
+        int pack_pos,
+        int step,
+        int iter,
+        int log_sparse,
+        const string &kind,
+        bool fast_pack,
+        bool debug)
+    {
+        (void)alpha;
+        (void)kp_wid;
+        (void)pack_pos;
+        (void)step;
+        (void)iter;
+        (void)fast_pack;
+        (void)debug;
+
+        bool trans = false;
+        if (kind != "Conv" && kind != "Conv_sparse")
+        {
+            throw invalid_argument("evalConv_BNRelu_new_cached: unsupported kind");
+        }
+
+        double out_scale = ct_input.scale();
+        PhantomCiphertext ct_conv = evalConv_BN(context, ckks_evaluator, encoder, ct_input,
+                                                ker_in, bn_a, bn_b, in_wid, ker_wid,
+                                                real_ib, real_ob, norm, out_scale, trans);
+
+        long logN = static_cast<long>(round(log2(static_cast<double>(context.key_context_data().parms().poly_modulus_degree()))));
+        long logn = logN - 1;
+        if (log_sparse > 0)
+        {
+            logn = std::max(0L, logn - log_sparse);
+        }
+        bootstrapper.final_scale = ct_conv.scale();
+        bootstrapper.slot_vec.clear();
         bootstrapper.slot_vec.push_back(logn);
         bootstrapper.generate_LT_coefficient_3();
 

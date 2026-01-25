@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "phantom.h"
 #include "conv_eval.h"
@@ -199,11 +200,13 @@ int main(int argc, char **argv) {
     CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key,
                                  &encoder, &relin_keys, &galois_keys, scale);
 
-    vector<uint32_t> elts;
-    for (int i = 0; i < logN; i++) {
-        elts.push_back((1u << (i + 1)) + 1);
+    vector<int> galois_steps;
+    galois_steps.push_back(0);
+    for (int i = 0; i < logN - 1; i++) {
+        galois_steps.push_back(1 << i);
     }
-    ckks_evaluator.decryptor.create_galois_keys_from_elts(elts, *(ckks_evaluator.galois_keys));
+    ckks_evaluator.decryptor.create_galois_keys_from_steps(galois_steps, *(ckks_evaluator.galois_keys));
+    map<int, unique_ptr<Bootstrapper>> btp_cache;
 
     for (int iter = st; iter < end; iter++) {
         cout << "Running " << iter << "-th iter... ker size: " << ker_wid << endl;
@@ -243,7 +246,17 @@ int main(int argc, char **argv) {
             vector<double> bn_b = read_csv_floats(weight_dir + "w" + to_string(i - 1) + "-b.csv");
             int ker_in_batch = (i == 1) ? 3 : real_batch[0];
             vector<double> ker_in = read_csv_floats(weight_dir + "w" + to_string(i - 1) + "-conv.csv");
-            ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
+            int log_sparse = 2;
+            int logn = logN - 1 - log_sparse;
+            if (btp_cache.find(logn) == btp_cache.end()) {
+                auto btp = make_unique<Bootstrapper>(10, logn, logN - 1,
+                                                     static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1,
+                                                     ct_layer.scale(), 25, 59, 2, 127, &ckks_evaluator);
+                btp->prepare_mod_polynomial();
+                btp->addLeftRotKeys_Linear_to_vector_3(galois_steps);
+                btp_cache.emplace(logn, std::move(btp));
+            }
+            ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, *btp_cache[logn], ct_layer,
                                            ker_in, bn_a, bn_b, alpha, relu_pow,
                                            in_wids[0], raw_in_wids[0], ker_wid,
                                            ker_in_batch, real_batch[0], norm[0],
@@ -256,11 +269,23 @@ int main(int argc, char **argv) {
         vector<double> ker_in12 = read_csv_floats(weight_dir + "w" + to_string(num_blcs[0]) + "-conv.csv");
         vector<double> bn_a12 = read_csv_floats(weight_dir + "w" + to_string(num_blcs[0]) + "-a.csv");
         vector<double> bn_b12 = read_csv_floats(weight_dir + "w" + to_string(num_blcs[0]) + "-b.csv");
-        ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
+        {
+            int log_sparse = 1;
+            int logn = logN - 1 - log_sparse;
+            if (btp_cache.find(logn) == btp_cache.end()) {
+                auto btp = make_unique<Bootstrapper>(10, logn, logN - 1,
+                                                     static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1,
+                                                     ct_layer.scale(), 25, 59, 2, 127, &ckks_evaluator);
+                btp->prepare_mod_polynomial();
+                btp->addLeftRotKeys_Linear_to_vector_3(galois_steps);
+                btp_cache.emplace(logn, std::move(btp));
+            }
+            ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, *btp_cache[logn], ct_layer,
                                        ker_in12, bn_a12, bn_b12, alpha, relu_pow,
                                        in_wids[0], raw_in_wids[1], ker_wid,
                                        real_batch[0], real_batch[1], norm[1],
                                        0, step[1], 2, 1, "StrConv_sparse", fast_pack, false);
+        }
         cout << "Block1 to 2 done!" << endl;
 
         for (int i = 1; i <= num_blcs[1]; i++) {
@@ -268,11 +293,23 @@ int main(int argc, char **argv) {
             vector<double> bn_a2 = read_csv_floats(weight_dir + "w" + to_string(idx) + "-a.csv");
             vector<double> bn_b2 = read_csv_floats(weight_dir + "w" + to_string(idx) + "-b.csv");
             vector<double> ker_in2 = read_csv_floats(weight_dir + "w" + to_string(idx) + "-conv.csv");
-            ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
+            {
+                int log_sparse = 3;
+                int logn = logN - 1 - log_sparse;
+                if (btp_cache.find(logn) == btp_cache.end()) {
+                    auto btp = make_unique<Bootstrapper>(10, logn, logN - 1,
+                                                         static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1,
+                                                         ct_layer.scale(), 25, 59, 2, 127, &ckks_evaluator);
+                    btp->prepare_mod_polynomial();
+                    btp->addLeftRotKeys_Linear_to_vector_3(galois_steps);
+                    btp_cache.emplace(logn, std::move(btp));
+                }
+                ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, *btp_cache[logn], ct_layer,
                                            ker_in2, bn_a2, bn_b2, alpha, relu_pow,
                                            in_wids[1], raw_in_wids[1], ker_wid,
                                            real_batch[1], real_batch[1], norm[1],
                                            0, step[1], 2, 3, "Conv_sparse", fast_pack, false);
+            }
             cout << "Block2, Layer " << i << " done!" << endl;
         }
         cout << "Block2 done." << endl;
@@ -281,11 +318,23 @@ int main(int argc, char **argv) {
         vector<double> ker_in23 = read_csv_floats(weight_dir + "w" + to_string(idx23) + "-conv.csv");
         vector<double> bn_a23 = read_csv_floats(weight_dir + "w" + to_string(idx23) + "-a.csv");
         vector<double> bn_b23 = read_csv_floats(weight_dir + "w" + to_string(idx23) + "-b.csv");
-        ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
+        {
+            int log_sparse = 2;
+            int logn = logN - 1 - log_sparse;
+            if (btp_cache.find(logn) == btp_cache.end()) {
+                auto btp = make_unique<Bootstrapper>(10, logn, logN - 1,
+                                                     static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1,
+                                                     ct_layer.scale(), 25, 59, 2, 127, &ckks_evaluator);
+                btp->prepare_mod_polynomial();
+                btp->addLeftRotKeys_Linear_to_vector_3(galois_steps);
+                btp_cache.emplace(logn, std::move(btp));
+            }
+            ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, *btp_cache[logn], ct_layer,
                                        ker_in23, bn_a23, bn_b23, alpha, relu_pow,
                                        in_wids[1], raw_in_wids[2], ker_wid,
                                        real_batch[1], real_batch[2], norm[2],
                                        0, step[2], 2, 2, "StrConv_sparse", fast_pack, false);
+        }
         cout << "Block2 to 3 done!" << endl;
 
         for (int i = 1; i <= num_blcs[2]; i++) {
@@ -296,11 +345,23 @@ int main(int argc, char **argv) {
             if (i == num_blcs[2]) {
                 relu_pow = final_pow;
             }
-            ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
+            {
+                int log_sparse = 4;
+                int logn = logN - 1 - log_sparse;
+                if (btp_cache.find(logn) == btp_cache.end()) {
+                    auto btp = make_unique<Bootstrapper>(10, logn, logN - 1,
+                                                         static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1,
+                                                         ct_layer.scale(), 25, 59, 2, 127, &ckks_evaluator);
+                    btp->prepare_mod_polynomial();
+                    btp->addLeftRotKeys_Linear_to_vector_3(galois_steps);
+                    btp_cache.emplace(logn, std::move(btp));
+                }
+                ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, *btp_cache[logn], ct_layer,
                                            ker_in3, bn_a3, bn_b3, alpha, relu_pow,
                                            in_wids[2], raw_in_wids[2], ker_wid,
                                            real_batch[2], real_batch[2], norm[2],
                                            0, step[2], 2, 4, "Conv_sparse", fast_pack, false);
+            }
             cout << "Block3, Layer " << i << " done!" << endl;
         }
         cout << "Block3 done." << endl;
