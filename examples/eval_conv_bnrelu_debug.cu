@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "phantom.h"
-
+#include "conv_eval.h"
 using namespace std;
 using namespace phantom;
 
@@ -181,8 +181,8 @@ int main() {
         throw invalid_argument("real_out size mismatch");
     }
 
-    size_t poly_modulus_degree = static_cast<size_t>(in_wid * in_wid * raw_in_batch);
-    int logN = static_cast<int>(round(log2(static_cast<double>(poly_modulus_degree))));
+    size_t poly_modulus_degree = 65536;
+    int logN = 16;
 
     int logp = 47;
     int logq = 51;
@@ -220,7 +220,8 @@ int main() {
                                  &encoder, &relin_keys, &galois_keys, scale);
 
     vector<uint32_t> elts;
-    for (int i = 0; i < logN - 1; i++) {
+    std::cout<<"the log N is"<<logN<<std::endl;
+    for (int i = 0; i < logN; i++) {
         elts.push_back((1u << (i + 1)) + 1);
     }
     ckks_evaluator.decryptor.create_galois_keys_from_elts(elts, *(ckks_evaluator.galois_keys));

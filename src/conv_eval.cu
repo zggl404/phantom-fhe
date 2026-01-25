@@ -294,12 +294,12 @@ PhantomCiphertext evalConv_BNRelu_new(
     PhantomCiphertext ct_conv = evalConv_BN(context, ckks_evaluator, encoder, ct_input,
                                             ker_in, bn_a, bn_b, in_wid, ker_wid,
                                             real_ib, real_ob, norm, out_scale, trans);
-    ct_conv.set_scale(ct_conv.scale() * pow(2.0, pow));
+    ct_conv.set_scale(ct_conv.scale() * std::pow(2.0, pow));
 
     long logN = static_cast<long>(round(log2(static_cast<double>(context.key_context_data().parms().poly_modulus_degree()))));
     long logn = logN - 1;
     if (log_sparse > 0) {
-        logn = max(0L, logn - log_sparse);
+        logn = std::max(0L, logn - log_sparse);
     }
     long loge = 10;
     long boundary_K = 25;
