@@ -233,7 +233,7 @@ int main() {
     vector<double> input_coeffs = prep_input(raw_input, raw_in_wid, in_wid,
                                              static_cast<int>(poly_modulus_degree), norm);
     PhantomPlaintext pt_input;
-    encoder.encode_coeffs(context, input_coeffs, scale, pt_input);
+    encoder.encode_coeffs(context, input_coeffs, scale, pt_input,20);
 
     PhantomCiphertext ct_input;
     ckks_evaluator.encryptor.encrypt(pt_input, ct_input);

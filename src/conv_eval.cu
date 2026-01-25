@@ -255,9 +255,7 @@ static PhantomCiphertext relu_coeff(const PhantomContext &context,
                                     const PhantomCiphertext &ct_in,
                                     bool debug) {
     PhantomCiphertext ct_manual = ct_in;
-    while (ct_manual.coeff_modulus_size() > 1) {
-        ckks_evaluator.evaluator.mod_switch_to_next_inplace(ct_manual);
-    }
+    
     if (debug) {
         cout << "[conv] ct_manual scale(log2): " << log2_scale(ct_manual.scale())
              << ", chain_index: " << ct_manual.chain_index() << endl;
@@ -268,7 +266,7 @@ static PhantomCiphertext relu_coeff(const PhantomContext &context,
         cout << "[conv] ct_manual coeffs (first 8): ";
         print_first_n(coeffs_conv, 8);
     }
-    bootstrapper.initial_scale = ct_manual.scale();
+    
     ckks_evaluator.evaluator.multiply_const_inplace(ct_manual, scale_for_eval);
     ckks_evaluator.evaluator.rescale_to_next_inplace(ct_manual);
     if (debug) {
@@ -280,6 +278,10 @@ static PhantomCiphertext relu_coeff(const PhantomContext &context,
         encoder.decode_coeffs(context, pt_conv, coeffs_conv);
         cout << "[conv] ct_manual coeffs (first 8): ";
         print_first_n(coeffs_conv, 8);
+    }
+    bootstrapper.initial_scale = ct_manual.scale();
+    while (ct_manual.coeff_modulus_size() > 1) {
+        ckks_evaluator.evaluator.mod_switch_to_next_inplace(ct_manual);
     }
     bootstrapper.modraise_inplace(ct_manual);
 
