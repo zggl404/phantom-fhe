@@ -9,6 +9,23 @@ using namespace std;
 
 namespace phantom {
 
+static void print_first_n(const vector<double> &values, size_t n);
+static void print_first_n(const vector<complex<double>> &values, size_t n);
+
+static void print_first_n(const vector<double> &values, size_t n) {
+    size_t limit = std::min(n, values.size());
+    for (size_t i = 0; i < limit; i++) {
+        cout << values[i] << (i + 1 == limit ? "\n" : ", ");
+    }
+}
+
+static void print_first_n(const vector<complex<double>> &values, size_t n) {
+    size_t limit = std::min(n, values.size());
+    for (size_t i = 0; i < limit; i++) {
+        cout << values[i] << (i + 1 == limit ? "\n" : ", ");
+    }
+}
+
 static vector<vector<double>> reshape_ker(const vector<double> &ker_in,
                                           int k_sz,
                                           int out_batch,
