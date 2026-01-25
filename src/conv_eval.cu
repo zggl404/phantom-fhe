@@ -11,6 +11,7 @@ namespace phantom {
 
 static void print_first_n(const vector<double> &values, size_t n);
 static void print_first_n(const vector<complex<double>> &values, size_t n);
+static double log2_scale(double scale);
 
 static void print_first_n(const vector<double> &values, size_t n) {
     size_t limit = std::min(n, values.size());
@@ -24,6 +25,10 @@ static void print_first_n(const vector<complex<double>> &values, size_t n) {
     for (size_t i = 0; i < limit; i++) {
         cout << values[i] << (i + 1 == limit ? "\n" : ", ");
     }
+}
+
+static double log2_scale(double scale) {
+    return std::log2(scale);
 }
 
 static vector<vector<double>> reshape_ker(const vector<double> &ker_in,
@@ -252,9 +257,29 @@ static PhantomCiphertext relu_coeff(const PhantomContext &context,
     while (ct_manual.coeff_modulus_size() > 1) {
         ckks_evaluator.evaluator.mod_switch_to_next_inplace(ct_manual);
     }
-
+    if (debug) {
+        cout << "[conv] ct_manual scale(log2): " << log2_scale(ct_manual.scale())
+             << ", chain_index: " << ct_manual.chain_index() << endl;
+        PhantomPlaintext pt_conv;
+        ckks_evaluator.decryptor.decrypt(ct_manual, pt_conv);
+        vector<double> coeffs_conv;
+        encoder.decode_coeffs(context, pt_conv, coeffs_conv);
+        cout << "[conv] ct_manual coeffs (first 8): ";
+        print_first_n(coeffs_conv, 8);
+    }
     bootstrapper.initial_scale = ct_manual.scale();
     ckks_evaluator.evaluator.multiply_const_inplace(ct_manual, scale_for_eval);
+    ckks_evaluator.evaluator.rescale_to_next_inplace(ct_manual);
+    if (debug) {
+        cout << "[conv] ct_manual scale(log2): " << log2_scale(ct_manual.scale())
+             << ", chain_index: " << ct_manual.chain_index() << endl;
+        PhantomPlaintext pt_conv;
+        ckks_evaluator.decryptor.decrypt(ct_manual, pt_conv);
+        vector<double> coeffs_conv;
+        encoder.decode_coeffs(context, pt_conv, coeffs_conv);
+        cout << "[conv] ct_manual coeffs (first 8): ";
+        print_first_n(coeffs_conv, 8);
+    }
     bootstrapper.modraise_inplace(ct_manual);
 
     const auto &modulus = context.first_context_data().parms().coeff_modulus();
@@ -271,17 +296,17 @@ static PhantomCiphertext relu_coeff(const PhantomContext &context,
     bootstrapper.slottocoeff_full_3(ct_out, ct_red_1, ct_red_2);
     ct_out.set_scale(bootstrapper.final_scale);
     if (debug) {
-        cout << "[relu] ct_manual scale: " << ct_manual.scale()
+        cout << "[relu] ct_manual scale(log2): " << log2_scale(ct_manual.scale())
              << ", chain_index: " << ct_manual.chain_index() << endl;
-        cout << "[relu] ct_slot_1 scale: " << ct_slot_1.scale()
+        cout << "[relu] ct_slot_1 scale(log2): " << log2_scale(ct_slot_1.scale())
              << ", chain_index: " << ct_slot_1.chain_index() << endl;
-        cout << "[relu] ct_slot_2 scale: " << ct_slot_2.scale()
+        cout << "[relu] ct_slot_2 scale(log2): " << log2_scale(ct_slot_2.scale())
              << ", chain_index: " << ct_slot_2.chain_index() << endl;
-        cout << "[relu] ct_red_1 scale: " << ct_red_1.scale()
+        cout << "[relu] ct_red_1 scale(log2): " << log2_scale(ct_red_1.scale())
              << ", chain_index: " << ct_red_1.chain_index() << endl;
-        cout << "[relu] ct_red_2 scale: " << ct_red_2.scale()
+        cout << "[relu] ct_red_2 scale(log2): " << log2_scale(ct_red_2.scale())
              << ", chain_index: " << ct_red_2.chain_index() << endl;
-        cout << "[relu] ct_out scale: " << ct_out.scale()
+        cout << "[relu] ct_out scale(log2): " << log2_scale(ct_out.scale())
              << ", chain_index: " << ct_out.chain_index() << endl;
     }
     return ct_out;
@@ -322,14 +347,14 @@ PhantomCiphertext evalConv_BNRelu_new(
     if (kind != "Conv" && kind != "Conv_sparse") {
         throw invalid_argument("evalConv_BNRelu_new: unsupported kind");
     }
-
+    
     double out_scale = ct_input.scale() * ct_input.scale();
     PhantomCiphertext ct_conv = evalConv_BN(context, ckks_evaluator, encoder, ct_input,
                                             ker_in, bn_a, bn_b, in_wid, ker_wid,
                                             real_ib, real_ob, norm, out_scale, trans);
-    ct_conv.set_scale(ct_conv.scale() * std::pow(2.0, pow));
+    ckks_evaluator.evaluator.rescale_to_next_inplace(ct_conv);
     if (debug) {
-        cout << "[conv] ct_conv scale: " << ct_conv.scale()
+        cout << "[conv] ct_conv scale(log2): " << log2_scale(ct_conv.scale())
              << ", chain_index: " << ct_conv.chain_index() << endl;
         PhantomPlaintext pt_conv;
         ckks_evaluator.decryptor.decrypt(ct_conv, pt_conv);
@@ -351,7 +376,7 @@ PhantomCiphertext evalConv_BNRelu_new(
     long inverse_deg = 127;
     long total_level = static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1;
 
-    Bootstrapper bootstrapper(loge, logn, logN - 1, total_level, ct_input.scale(),
+    Bootstrapper bootstrapper(loge, logn, logN - 1, total_level, ct_conv.scale(),
                               boundary_K, deg, scale_factor, inverse_deg, &ckks_evaluator);
     bootstrapper.prepare_mod_polynomial();
     vector<int> gal_steps_vector;

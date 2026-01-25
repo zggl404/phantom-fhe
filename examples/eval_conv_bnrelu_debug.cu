@@ -159,7 +159,7 @@ int main() {
     vector<double> ker_in = read_csv_floats(prefix + "ker_" + to_string(test_iter) + ".csv");
     vector<double> bn_a = read_csv_floats(prefix + "bna_" + to_string(test_iter) + ".csv");
     vector<double> bn_b = read_csv_floats(prefix + "bnb_" + to_string(test_iter) + ".csv");
-    vector<double> real_out = read_csv_floats(prefix + "out_" + to_string(test_iter) + ".csv");
+    vector<double> real_out = read_csv_floats(prefix + "reluout_" + to_string(test_iter) + ".csv");
 
     int raw_in_wid = static_cast<int>(round(sqrt(static_cast<double>(raw_input.size() / raw_in_batch))));
     if (raw_in_wid * raw_in_wid * raw_in_batch != static_cast<int>(raw_input.size())) {
@@ -240,7 +240,7 @@ int main() {
 
     cout << "poly_modulus_degree: " << poly_modulus_degree
          << ", logN: " << logN << endl;
-    cout << "ct_input scale: " << ct_input.scale()
+    cout << "ct_input scale(log2): " << std::log2(ct_input.scale())
          << ", chain_index: " << ct_input.chain_index() << endl;
     PhantomPlaintext pt_input_debug;
     ckks_evaluator.decryptor.decrypt(ct_input, pt_input_debug);
@@ -275,7 +275,7 @@ int main() {
         false,
         true);
 
-    cout << "ct_out scale: " << ct_out.scale()
+    cout << "ct_out scale(log2): " << std::log2(ct_out.scale())
          << ", chain_index: " << ct_out.chain_index() << endl;
 
     PhantomPlaintext pt_out;
@@ -289,13 +289,7 @@ int main() {
         cout << decoded[i] << (i + 1 == 8 ? "\n" : ", ");
     }
 
-    vector<double> expected = cpu_conv_ref(raw_input, ker_in, bn_a, bn_b,
-                                           raw_in_wid, in_wid, ker_wid,
-                                           raw_in_batch, raw_out_batch);
-    auto relu = [](double x) { return x > 0.0 ? x : 0.0; };
-    for (double &v : expected) {
-        v = relu(v);
-    }
+    vector<double> expected = real_out;
 
     auto expected_mm = minmax_element(expected.begin(), expected.end());
     auto output_mm = minmax_element(test_out.begin(), test_out.end());
