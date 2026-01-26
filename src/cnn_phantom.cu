@@ -219,8 +219,8 @@ void bootstrap_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, Bootstra
 	ctxt = cnn_in.cipher();
 	time_start = chrono::high_resolution_clock::now();
 	// bootstrapper.bootstrap_3(rtn, ctxt);
-	ckksevaluator.evaluator.mod_switch_to_inplace(ctxt, bootstrapper.L + 1);
-	bootstrapper.bootstrap_real_3(rtn, ctxt);
+	
+	bootstrapper.slim_bootstrap(rtn, ctxt);
 	time_end = chrono::high_resolution_clock::now();
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
 	cout << "Bootstrap Time : " << time_diff.count() / 1000 << " ms" << endl;

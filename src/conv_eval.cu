@@ -681,7 +681,7 @@ namespace phantom
         (void)debug;
 
         bool trans = false;
-        if (kind != "Conv" && kind != "Conv_sparse")
+        if (kind != "Conv" && kind != "Conv_sparse" && kind != "StrConv_sparse")
         {
             throw invalid_argument("evalConv_BNRelu_new: unsupported kind");
         }
@@ -766,7 +766,7 @@ namespace phantom
         (void)debug;
 
         bool trans = false;
-        if (kind != "Conv" && kind != "Conv_sparse")
+        if (kind != "Conv" && kind != "Conv_sparse" && kind != "StrConv_sparse")
         {
             throw invalid_argument("evalConv_BNRelu_new_cached: unsupported kind");
         }

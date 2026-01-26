@@ -205,6 +205,7 @@ int main(int argc, char **argv) {
     galois_steps.push_back(0);
     for (int i = 0; i < logN - 1; i++) {
         galois_steps.push_back(1 << i);
+        galois_steps.push_back(-(1 << i));
     }
     auto step_elts = get_elts_from_steps(galois_steps, poly_modulus_degree);
     std::set<uint32_t> galois_elt_set(step_elts.begin(), step_elts.end());
@@ -213,16 +214,6 @@ int main(int argc, char **argv) {
     }
     vector<uint32_t> galois_elts(galois_elt_set.begin(), galois_elt_set.end());
     ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
-    int log_sparse_init = 0;
-    int logn_init = logN - 1 - log_sparse_init;
-    Bootstrapper bootstrapper(10, logn_init, logN - 1,
-                              static_cast<long>(context.key_context_data().parms().coeff_modulus().size()) - 1,
-                              scale, 25, 59, 2, 127, &ckks_evaluator);
-    bootstrapper.prepare_mod_polynomial();
-    bootstrapper.addLeftRotKeys_Linear_to_vector_3(galois_steps);
-    bootstrapper.slot_vec.push_back(logn_init);
-    bootstrapper.generate_LT_coefficient_3();
-
     for (int iter = st; iter < end; iter++) {
         cout << "Running " << iter << "-th iter... ker size: " << ker_wid << endl;
         string img_path = "data/Resnet_plain_data/crop_ker" + to_string(ker_wid) + "_d" +
@@ -261,7 +252,7 @@ int main(int argc, char **argv) {
             vector<double> bn_b = read_csv_floats(weight_dir + "w" + to_string(i - 1) + "-b.csv");
             int ker_in_batch = (i == 1) ? 3 : real_batch[0];
             vector<double> ker_in = read_csv_floats(weight_dir + "w" + to_string(i - 1) + "-conv.csv");
-            ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, bootstrapper, ct_layer,
+            ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
                                            ker_in, bn_a, bn_b, alpha, relu_pow,
                                            in_wids[0], raw_in_wids[0], ker_wid,
                                            ker_in_batch, real_batch[0], norm[0],
@@ -274,7 +265,7 @@ int main(int argc, char **argv) {
         vector<double> ker_in12 = read_csv_floats(weight_dir + "w" + to_string(num_blcs[0]) + "-conv.csv");
         vector<double> bn_a12 = read_csv_floats(weight_dir + "w" + to_string(num_blcs[0]) + "-a.csv");
         vector<double> bn_b12 = read_csv_floats(weight_dir + "w" + to_string(num_blcs[0]) + "-b.csv");
-        ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, bootstrapper, ct_layer,
+            ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
                                        ker_in12, bn_a12, bn_b12, alpha, relu_pow,
                                        in_wids[0], raw_in_wids[1], ker_wid,
                                        real_batch[0], real_batch[1], norm[1],
@@ -286,7 +277,7 @@ int main(int argc, char **argv) {
             vector<double> bn_a2 = read_csv_floats(weight_dir + "w" + to_string(idx) + "-a.csv");
             vector<double> bn_b2 = read_csv_floats(weight_dir + "w" + to_string(idx) + "-b.csv");
             vector<double> ker_in2 = read_csv_floats(weight_dir + "w" + to_string(idx) + "-conv.csv");
-            ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, bootstrapper, ct_layer,
+                ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
                                            ker_in2, bn_a2, bn_b2, alpha, relu_pow,
                                            in_wids[1], raw_in_wids[1], ker_wid,
                                            real_batch[1], real_batch[1], norm[1],
@@ -299,7 +290,7 @@ int main(int argc, char **argv) {
         vector<double> ker_in23 = read_csv_floats(weight_dir + "w" + to_string(idx23) + "-conv.csv");
         vector<double> bn_a23 = read_csv_floats(weight_dir + "w" + to_string(idx23) + "-a.csv");
         vector<double> bn_b23 = read_csv_floats(weight_dir + "w" + to_string(idx23) + "-b.csv");
-        ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, bootstrapper, ct_layer,
+            ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
                                        ker_in23, bn_a23, bn_b23, alpha, relu_pow,
                                        in_wids[1], raw_in_wids[2], ker_wid,
                                        real_batch[1], real_batch[2], norm[2],
@@ -314,7 +305,7 @@ int main(int argc, char **argv) {
             if (i == num_blcs[2]) {
                 relu_pow = final_pow;
             }
-            ct_layer = evalConv_BNRelu_new_cached(context, ckks_evaluator, encoder, bootstrapper, ct_layer,
+                ct_layer = evalConv_BNRelu_new(context, ckks_evaluator, encoder, ct_layer,
                                            ker_in3, bn_a3, bn_b3, alpha, relu_pow,
                                            in_wids[2], raw_in_wids[2], ker_wid,
                                            real_batch[2], real_batch[2], norm[2],

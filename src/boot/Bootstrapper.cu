@@ -4238,7 +4238,7 @@ void Bootstrapper::slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, Phantom
   cout << "Modular reduction..." << endl;
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
 
-  mod_reducer->modular_reduction(real_part, real_part);
+  mod_reducer->modular_reduction_relu(real_part, real_part);
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
 
   cout << "scale = " << setprecision(20) << real_part.scale() << endl;
@@ -4290,7 +4290,7 @@ void Bootstrapper::slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, Phan
   cout << "Modular reduction..." << endl;
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
 
-  mod_reducer->modular_reduction(real_part, real_part);
+  mod_reducer->modular_reduction_relu(real_part, real_part);
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
   cout << "scale = " << setprecision(10) << real_part.scale() << endl;
 
