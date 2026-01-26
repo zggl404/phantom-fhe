@@ -1,6 +1,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -8,6 +9,7 @@
 
 #include "phantom.h"
 #include "conv_eval.h"
+#include "galois.cuh"
 
 using namespace std;
 using namespace phantom;
@@ -199,13 +201,17 @@ int main(int argc, char **argv) {
     CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key,
                                  &encoder, &relin_keys, &galois_keys, scale);
 
-    vector<uint32_t> galois_elts;
     vector<int> galois_steps;
     galois_steps.push_back(0);
-    for (int i = 0; i < logN; i++) {
-        galois_elts.push_back((1u << (i + 1)) + 1);
+    for (int i = 0; i < logN - 1; i++) {
         galois_steps.push_back(1 << i);
     }
+    auto step_elts = get_elts_from_steps(galois_steps, poly_modulus_degree);
+    std::set<uint32_t> galois_elt_set(step_elts.begin(), step_elts.end());
+    for (int i = 1; i <= logN; i++) {
+        galois_elt_set.insert((1u << i) + 1);
+    }
+    vector<uint32_t> galois_elts(galois_elt_set.begin(), galois_elt_set.end());
     ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
     int log_sparse_init = 0;
     int logn_init = logN - 1 - log_sparse_init;
