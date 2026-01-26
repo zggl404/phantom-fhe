@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
     int log_special_prime = 51;
     int secret_key_hamming_weight = 192;
     int remaining_level = 3;
-    int boot_level = 3 + 6 + 2 + 1 + 7 + 1;
+    int boot_level = 3 + 6 + 2 + 1 + 7 + 1 + 4;
 
     vector<int> coeff_bit_vec;
     coeff_bit_vec.push_back(logq);
@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
 
         PhantomCiphertext ct_input;
         ckks_evaluator.encryptor.encrypt(pt_input, ct_input);
-        ckks_evaluator.evaluator.mod_switch_to_inplace(ct_input, 20);
+        ckks_evaluator.evaluator.mod_switch_to_inplace(ct_input, 24);
 
         double relu_pow = init_pow;
         PhantomCiphertext ct_layer = ct_input;

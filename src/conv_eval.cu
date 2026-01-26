@@ -176,6 +176,272 @@ namespace phantom
         return idx;
     }
 
+    static vector<complex<double>> reshape_input_BL(const vector<double> &input,
+                                                    int in_wid)
+    {
+        vector<complex<double>> out(input.size(), complex<double>(0.0, 0.0));
+        int batch = static_cast<int>(input.size()) / (in_wid * in_wid);
+        int l = 0;
+
+        for (int i = 0; i < in_wid; i++)
+        {
+            for (int j = 0; j < in_wid; j++)
+            {
+                for (int k = 0; k < batch; k++)
+                {
+                    out[i * in_wid + j + k * in_wid * in_wid] = complex<double>(input[l], 0.0);
+                    l++;
+                }
+            }
+        }
+
+        return out;
+    }
+
+    static vector<vector<vector<vector<double>>>> reshape_ker_BL(const vector<double> &input,
+                                                                 const vector<double> &bn_a,
+                                                                 int ker_wid,
+                                                                 int inB,
+                                                                 int outB,
+                                                                 int max_bat,
+                                                                 int pos,
+                                                                 int norm,
+                                                                 bool trans)
+    {
+        vector<vector<vector<vector<double>>>> ker_rs(ker_wid);
+        for (int i = 0; i < ker_wid; i++)
+        {
+            ker_rs[i].resize(ker_wid);
+            for (int j = 0; j < ker_wid; j++)
+            {
+                ker_rs[i][j].resize(inB);
+                for (int ib = 0; ib < inB; ib++)
+                {
+                    ker_rs[i][j][ib].resize(outB, 0.0);
+                    for (int ob = 0; ob < outB; ob++)
+                    {
+                        if (trans)
+                        {
+                            if (ib < (inB / 4))
+                            {
+                                ker_rs[i][j][ib][ob] =
+                                    input[(4 * ib + pos) + ob * inB +
+                                          (ker_wid - j - 1) * outB * inB +
+                                          (ker_wid - i - 1) * outB * inB * ker_wid] *
+                                    bn_a[ob];
+                            }
+                        }
+                        else
+                        {
+                            ker_rs[i][j][ib][ob] =
+                                input[ob + ib * outB + j * outB * inB + i * outB * inB * ker_wid] *
+                                bn_a[ob];
+                        }
+                    }
+                }
+            }
+        }
+
+        vector<vector<vector<vector<double>>>> max_ker_rs(ker_wid);
+        for (int i = 0; i < ker_wid; i++)
+        {
+            max_ker_rs[i].resize(ker_wid);
+            for (int j = 0; j < ker_wid; j++)
+            {
+                max_ker_rs[i][j].resize(max_bat);
+                for (int ib = 0; ib < max_bat; ib++)
+                {
+                    max_ker_rs[i][j][ib].resize(max_bat, 0.0);
+                }
+                for (int ib = 0; ib < inB; ib++)
+                {
+                    for (int ob = 0; ob < outB; ob++)
+                    {
+                        max_ker_rs[i][j][norm * ib][norm * ob] = ker_rs[i][j][ib][ob];
+                    }
+                }
+            }
+        }
+
+        return max_ker_rs;
+    }
+
+    static vector<PhantomCiphertext> preConv_BL(CKKSEvaluator &ckks_evaluator,
+                                                const PhantomCiphertext &ct_in,
+                                                int in_wid,
+                                                int ker_wid)
+    {
+        int ker_size = ker_wid * ker_wid;
+        vector<PhantomCiphertext> ct_in_rots(ker_size);
+        int st = -(ker_wid / 2);
+        int end = ker_wid / 2;
+
+        int k = 0;
+        for (int i = st; i <= end; i++)
+        {
+            for (int j = st; j <= end; j++)
+            {
+                int rot = i * in_wid + j;
+                if (rot == 0)
+                {
+                    ct_in_rots[k] = ct_in;
+                }
+                else
+                {
+                    ckks_evaluator.evaluator.rotate_vector(
+                        const_cast<PhantomCiphertext &>(ct_in),
+                        rot,
+                        *(ckks_evaluator.galois_keys),
+                        ct_in_rots[k]);
+                }
+                k++;
+            }
+        }
+
+        return ct_in_rots;
+    }
+
+    static PhantomCiphertext postConv_BL(const PhantomContext &context,
+                                         PhantomCKKSEncoder &encoder,
+                                         CKKSEvaluator &ckks_evaluator,
+                                         const vector<PhantomCiphertext> &ct_in_rots,
+                                         int in_wid,
+                                         int ker_wid,
+                                         int rot,
+                                         int pad,
+                                         const vector<vector<vector<vector<double>>>> &max_ker_rs)
+    {
+        size_t slots = context.key_context_data().parms().poly_modulus_degree() / 2;
+        int max_batch = static_cast<int>(slots / (in_wid * in_wid));
+        vector<complex<double>> postKer(slots, complex<double>(0.0, 0.0));
+
+        PhantomCiphertext ct_out;
+        int iter = 0;
+        for (int i = 0; i < ker_wid; i++)
+        {
+            for (int j = 0; j < ker_wid; j++)
+            {
+                for (int k = 0; k < max_batch; k++)
+                {
+                    for (int ki = 0; ki < (in_wid - pad); ki++)
+                    {
+                        for (int kj = 0; kj < (in_wid - pad); kj++)
+                        {
+                            size_t idx = static_cast<size_t>(k * in_wid * in_wid + ki * in_wid + kj);
+                            postKer[idx] = complex<double>(
+                                max_ker_rs[i][j][k][(k - rot + max_batch) % max_batch], 0.0);
+                            if (((ki + i - (ker_wid / 2)) < 0) ||
+                                ((ki + i - (ker_wid / 2)) >= (in_wid - pad)) ||
+                                ((kj + j - (ker_wid / 2)) < 0) ||
+                                ((kj + j - (ker_wid / 2)) >= (in_wid - pad)))
+                            {
+                                postKer[idx] = complex<double>(0.0, 0.0);
+                            }
+                        }
+                    }
+                }
+
+                PhantomPlaintext pl_tmp;
+                encoder.encode(context, postKer, ct_in_rots[0].scale(), pl_tmp, ct_in_rots[0].chain_index());
+                PhantomCiphertext ct_tmp;
+                ckks_evaluator.evaluator.multiply_plain(ct_in_rots[iter], pl_tmp, ct_tmp);
+                if (i == 0 && j == 0)
+                {
+                    ct_out = ct_tmp;
+                }
+                else
+                {
+                    ckks_evaluator.evaluator.add(ct_out, ct_tmp, ct_out);
+                }
+                iter++;
+            }
+        }
+
+        return ct_out;
+    }
+
+    PhantomCiphertext evalConv_BN_BL_test(const PhantomContext &context,
+                                          CKKSEvaluator &ckks_evaluator,
+                                          PhantomCKKSEncoder &encoder,
+                                          const PhantomCiphertext &ct_input,
+                                          const vector<double> &ker_in,
+                                          const vector<double> &bn_a,
+                                          const vector<double> &bn_b,
+                                          int in_wid,
+                                          int ker_wid,
+                                          int real_ib,
+                                          int real_ob,
+                                          int pos,
+                                          int norm,
+                                          int pad,
+                                          bool trans,
+                                          bool printResult)
+    {
+        (void)printResult;
+        int in_size = in_wid * in_wid;
+        int out_size = in_size;
+        int max_batch = static_cast<int>(context.key_context_data().parms().poly_modulus_degree() / 2 / in_size);
+
+        auto max_ker_rs = reshape_ker_BL(ker_in, bn_a, ker_wid, real_ib, real_ob, max_batch, pos, norm, trans);
+        double scale_exp = ct_input.scale() * ct_input.scale();
+        if (trans)
+        {
+            scale_exp = ct_input.scale() * ct_input.scale() * ct_input.scale();
+        }
+
+        vector<complex<double>> bn_b_slots(context.key_context_data().parms().poly_modulus_degree() / 2,
+                                           complex<double>(0.0, 0.0));
+        for (size_t i = 0; i < bn_b.size(); i++)
+        {
+            for (int j = 0; j < in_wid - pad; j++)
+            {
+                for (int k = 0; k < in_wid - pad; k++)
+                {
+                    size_t idx = static_cast<size_t>(j + k * in_wid + norm * out_size * static_cast<int>(i));
+                    if (idx < bn_b_slots.size())
+                    {
+                        bn_b_slots[idx] = complex<double>(bn_b[i], 0.0);
+                    }
+                }
+            }
+        }
+
+        PhantomPlaintext pl_bn_b;
+        encoder.encode(context, bn_b_slots, scale_exp, pl_bn_b, ct_input.chain_index());
+
+        auto ct_inputs_rots = preConv_BL(ckks_evaluator, ct_input, in_wid, ker_wid);
+
+        int rot_iters = (norm * real_ob == max_batch) ? real_ob : max_batch;
+        PhantomCiphertext ct_res;
+        for (int i = 0; i < rot_iters; i++)
+        {
+            PhantomCiphertext ct_tmp = postConv_BL(context, encoder, ckks_evaluator, ct_inputs_rots,
+                                                   in_wid, ker_wid, norm * i, pad, max_ker_rs);
+            if (i == 0)
+            {
+                ct_res = ct_tmp;
+            }
+            else
+            {
+                PhantomCiphertext ct_rot;
+                if (norm * i * out_size == 0)
+                {
+                    ct_rot = ct_tmp;
+                }
+                else
+                {
+                    ckks_evaluator.evaluator.rotate_vector(ct_tmp, norm * i * out_size,
+                                                           *(ckks_evaluator.galois_keys), ct_rot);
+                }
+                ckks_evaluator.evaluator.add(ct_res, ct_rot, ct_res);
+            }
+        }
+
+        ckks_evaluator.evaluator.add_plain_inplace(ct_res, pl_bn_b);
+
+        return ct_res;
+    }
+
     static PhantomCiphertext pack_ctxts(CKKSEvaluator &ckks_evaluator,
                                         const vector<PhantomCiphertext> &ctxts_in,
                                         int max_cnum,
