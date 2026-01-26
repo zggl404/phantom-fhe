@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <complex>
 #include <fstream>
 #include <iostream>
@@ -162,7 +163,7 @@ static vector<double> post_process_coeff(const vector<double> &in_cfs,
 
 static void print_first_n(const vector<double> &values, size_t n)
 {
-    size_t limit = min(n, values.size());
+    size_t limit = std::min(n, values.size());
     for (size_t i = 0; i < limit; i++)
     {
         cout << values[i] << (i + 1 == limit ? "\n" : ", ");
@@ -253,7 +254,7 @@ int main(int argc, char **argv)
                                  &encoder, &relin_keys, &galois_keys, scale);
 
     int logN = static_cast<int>(round(log2(static_cast<double>(poly_modulus_degree))));
-    set<uint32_t> elt_set;
+    std::set<uint32_t> elt_set;
     for (int i = 0; i < logN; i++)
     {
         elt_set.insert((1u << (i + 1)) + 1);
@@ -362,6 +363,7 @@ int main(int argc, char **argv)
     ckks_evaluator.encryptor.encrypt(pt_input1, ct_input1);
     ckks_evaluator.encryptor.encrypt(pt_input2, ct_input2);
 
+    auto bl_start = chrono::steady_clock::now();
     vector<PhantomCiphertext> ct_res_bl(2);
     for (int pos = 0; pos < 2; pos++)
     {
@@ -375,6 +377,9 @@ int main(int argc, char **argv)
                                                          0, 1, pad, false, false);
         ckks_evaluator.evaluator.add(ct_left, ct_right, ct_res_bl[pos]);
     }
+
+    auto bl_end = chrono::steady_clock::now();
+    double bl_seconds = chrono::duration<double>(bl_end - bl_start).count();
 
     vector<double> bl_out;
     for (int pos = 0; pos < 2; pos++)
@@ -402,9 +407,12 @@ int main(int argc, char **argv)
     PhantomCiphertext ct_input_coeff;
     ckks_evaluator.encryptor.encrypt(pt_input_coeff, ct_input_coeff);
 
+    auto coeff_start = chrono::steady_clock::now();
     PhantomCiphertext ct_coeff = evalConv_BN(context, ckks_evaluator, encoder, ct_input_coeff,
                                              ker_in, bn_a, bn_b, in_wid, ker_wid,
                                              real_batch, raw_out_batch, norm, out_scale, false);
+    auto coeff_end = chrono::steady_clock::now();
+    double coeff_seconds = chrono::duration<double>(coeff_end - coeff_start).count();
     PhantomPlaintext pt_coeff;
     ckks_evaluator.decryptor.decrypt(ct_coeff, pt_coeff);
     vector<double> coeff_vals;
@@ -414,6 +422,8 @@ int main(int argc, char **argv)
     cout << "Max error (BL vs real_out): " << max_abs_diff(bl_out, real_out) << endl;
     cout << "Max error (coeff vs real_out): " << max_abs_diff(coeff_out, real_out) << endl;
     cout << "Max error (BL vs coeff): " << max_abs_diff(bl_out, coeff_out) << endl;
+    cout << "Baseline (BL) eval time: " << bl_seconds << " s" << endl;
+    cout << "Coeff eval time: " << coeff_seconds << " s" << endl;
 
     cout << "First 8 coeffs (BL): ";
     print_first_n(bl_out, 8);

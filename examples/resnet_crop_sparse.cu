@@ -200,8 +200,11 @@ int main(int argc, char **argv) {
                                  &encoder, &relin_keys, &galois_keys, scale);
 
     vector<uint32_t> galois_elts;
+    vector<int> galois_steps;
+    galois_steps.push_back(0);
     for (int i = 0; i < logN; i++) {
-        galois_elts.push_back((1u << i) + 1);
+        galois_elts.push_back((1u << (i + 1)) + 1);
+        galois_steps.push_back(1 << i);
     }
     ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
     int log_sparse_init = 0;

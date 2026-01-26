@@ -447,7 +447,8 @@ namespace phantom
                                         int max_cnum,
                                         int real_cnum,
                                         const vector<PhantomPlaintext> &idx,
-                                        int logN)
+                                        int logN,
+                                        size_t target_chain_index)
     {
         int norm = max_cnum / real_cnum;
         vector<PhantomCiphertext> ctxts(max_cnum);
@@ -461,6 +462,16 @@ namespace phantom
             }
         }
 
+        size_t target_chain_index_local = target_chain_index;
+        for (int i = 0; i < max_cnum; i += norm)
+        {
+            if (ctxts[i].chain_index() != 0)
+            {
+                target_chain_index_local = ctxts[i].chain_index();
+                break;
+            }
+        }
+
         int step = max_cnum / 2;
         int logStep = 0;
         for (int i = step; i > 1; i /= 2)
@@ -471,7 +482,7 @@ namespace phantom
         vector<PhantomPlaintext> idx_sw = idx;
         for (size_t i = 0; i < idx_sw.size(); i++)
         {
-            ckks_evaluator.evaluator.mod_switch_to_inplace(idx_sw[i], static_cast<size_t>(26));
+            ckks_evaluator.evaluator.mod_switch_to_inplace(idx_sw[i], target_chain_index_local);
         }
         PhantomCiphertext tmp1, tmp2, rot;
         for (; step >= norm; step /= 2)
@@ -520,7 +531,8 @@ namespace phantom
             }
         }
 
-        return pack_ctxts(ckks_evaluator, ctxt_out, max_ob, max_ob / norm, plain_idx, logN);
+        return pack_ctxts(ckks_evaluator, ctxt_out, max_ob, max_ob / norm, plain_idx, logN,
+                          ctxt_in.chain_index());
     }
 
     PhantomCiphertext evalConv_BN(const PhantomContext &context,
@@ -545,13 +557,14 @@ namespace phantom
         vector<PhantomPlaintext> plain_idx = gen_idxNlogs(context, encoder);
         int logN = static_cast<int>(round(log2(static_cast<double>(context.key_context_data().parms().poly_modulus_degree()))));
 
-        for (int i = 0; i < pl_ker.size(); i++)
+        size_t target_chain_index = ct_input.chain_index();
+        for (int i = 0; i < static_cast<int>(pl_ker.size()); i++)
         {
-            ckks_evaluator.evaluator.mod_switch_to_inplace(pl_ker[i], 24);
+            ckks_evaluator.evaluator.mod_switch_to_inplace(pl_ker[i], target_chain_index);
         }
-        for (int i = 0; i < plain_idx.size(); i++)
+        for (int i = 0; i < static_cast<int>(plain_idx.size()); i++)
         {
-            ckks_evaluator.evaluator.mod_switch_to_inplace(plain_idx[i], 24);
+            ckks_evaluator.evaluator.mod_switch_to_inplace(plain_idx[i], target_chain_index);
         }
         PhantomCiphertext ct_conv = conv_then_pack(context, ckks_evaluator, ct_input, pl_ker,
                                                    plain_idx, max_batch, norm, out_scale, logN);
