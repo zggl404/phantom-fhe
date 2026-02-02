@@ -12,7 +12,7 @@ void random_real(vector<double> &vec, size_t size)
     mt19937_64 rnd(rn());
     thread_local std::uniform_real_distribution<double> distribution(-1, 1);
 
-    vec.reserve(size);
+    vec.resize(size);
 
     for (size_t i = 0; i < size; i++)
     {
@@ -24,7 +24,7 @@ int main()
 {
     std::cout << "Setting Parameters..." << endl;
     size_t poly_modulus_degree = 1 << 15;
-    uint64_t slot_count = 65536;
+    uint64_t slot_count = poly_modulus_degree / 2;
     phantom::EncryptionParameters parms(scheme_type::ckks);
     parms.set_poly_modulus_degree(poly_modulus_degree);
     parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(
@@ -57,9 +57,11 @@ int main()
     PhantomPlaintext plain;
     PhantomCiphertext cipher;
 
-    for (int i = 0; i < slot_count; i++)
+    input.resize(slot_count);
+    after.resize(slot_count);
+    for (size_t i = 0; i < slot_count; i++)
     {
-        input[i] = i/10000;;
+        input[i] = static_cast<double>(i) / 10000.0;
     }
     ckks_evaluator.encoder.encode(input, scale, plain);
     ckks_evaluator.encryptor.encrypt(plain, cipher);
@@ -74,7 +76,8 @@ int main()
 
         cout << " " << after[i];
     }
-    std::cout << std::endl;for (size_t i = 0; i < 10; i++)
+    std::cout << std::endl;
+    for (size_t i = 0; i < 10; i++)
     {
 
         cout << " " << input[i];
