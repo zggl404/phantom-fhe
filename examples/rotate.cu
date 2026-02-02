@@ -23,10 +23,11 @@ void random_real(vector<double> &vec, size_t size)
 int main()
 {
     std::cout << "Setting Parameters..." << endl;
-
+    size_t poly_modulus_degree = 1 << 15;
+    uint64_t slot_count = 65536;
     phantom::EncryptionParameters parms(scheme_type::ckks);
     parms.set_poly_modulus_degree(poly_modulus_degree);
-    parms.set_coeff_modulus(CoeffModulus::Create(
+    parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(
         poly_modulus_degree, {60, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 60, 60, 60, 60}));
     // hybrid key-switching
     parms.set_special_modulus_size(4);
@@ -50,35 +51,33 @@ int main()
     }
 
     ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
-    vector<double> input(1 << (logN - 1));
-    vector<double> before(1 << (logN - 1));
-    vector<double> after(1 << (logN - 1));
-
+    vector<double> input;
+    vector<double> after;
+    
     PhantomPlaintext plain;
     PhantomCiphertext cipher;
 
-    for (int i = 0; i < sparse_slot_count; i++)
+    for (int i = 0; i < slot_count; i++)
     {
-        input[i] = -1 + (1. - -1) * i / sparse_slot_count;
+        input[i] = i/10000;;
     }
-    input.resize(1 << (logN - 1));
-    for (int i = sparse_slot_count; i < input.size(); i++)
-    {
-        input[i] = input[i % sparse_slot_count];
-    }
-
     ckks_evaluator.encoder.encode(input, scale, plain);
     ckks_evaluator.encryptor.encrypt(plain, cipher);
 
     rotate_inplace(context, cipher, 4, *(ckks_evaluator.galois_keys));
 
-    ckks_evaluator.decryptor.decrypt(rtn, plain);
+    ckks_evaluator.decryptor.decrypt(cipher, plain);
     ckks_evaluator.encoder.decode(plain, after);
 
-    for (size_t i = 0; i < sparse_slot_count; i++)
+    for (size_t i = 0; i < 10; i++)
     {
 
         cout << " " << after[i];
+    }
+    std::cout << std::endl;for (size_t i = 0; i < 10; i++)
+    {
+
+        cout << " " << input[i];
     }
     std::cout << std::endl;
 
