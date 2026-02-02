@@ -25,6 +25,12 @@ int main()
     std::cout << "Setting Parameters..." << endl;
     size_t poly_modulus_degree = 1 << 15;
     uint64_t slot_count = poly_modulus_degree / 2;
+    size_t logn = 13;
+    size_t sparse_slot_count = 1ULL << (1 + logn);
+    if (sparse_slot_count > slot_count)
+    {
+        sparse_slot_count = slot_count;
+    }
     phantom::EncryptionParameters parms(scheme_type::ckks);
     parms.set_poly_modulus_degree(poly_modulus_degree);
     parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(
@@ -59,9 +65,13 @@ int main()
 
     input.resize(slot_count);
     after.resize(slot_count);
-    for (size_t i = 0; i < slot_count; i++)
+    for (size_t i = 0; i < sparse_slot_count; i++)
     {
-        input[i] = static_cast<double>(i) / 10000.0;
+        input[i] = -1.0 + (2.0 * static_cast<double>(i) / static_cast<double>(sparse_slot_count));
+    }
+    for (size_t i = sparse_slot_count; i < slot_count; i++)
+    {
+        input[i] = input[i % sparse_slot_count];
     }
     ckks_evaluator.encoder.encode(input, scale, plain);
     ckks_evaluator.encryptor.encrypt(plain, cipher);
