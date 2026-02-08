@@ -1,6 +1,7 @@
 #include "phantom.h"
 
 using namespace phantom;
+using namespace phantom::arith;
 using namespace phantom::util;
 
 int main() {

@@ -4,7 +4,7 @@
 #include <vector>
 
 using namespace phantom;
-using namespace phantom::arith
+using namespace phantom::arith;
 
 int main() {
     EncryptionParameters parms(scheme_type::ckks);

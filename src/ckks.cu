@@ -118,6 +118,7 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const st
 
     special_fft_backward(*gpu_ckks_msg_vec_, log_slot_count, fix, stream);
 
+    int max_coeff_bit_count = context_data.total_coeff_modulus_bit_count() - 1;
     if (g_strict_encode_boundary_check) {
         vector<cuDoubleComplex> temp2(slots_);
         cudaMemcpyAsync(temp2.data(), gpu_ckks_msg_vec_->in(), slots_ * sizeof(cuDoubleComplex),
@@ -132,7 +133,7 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const st
             max_coeff = std::max(max_coeff, std::fabs(temp2[i].y));
         }
 
-        int max_coeff_bit_count = static_cast<int>(std::ceil(std::log2(std::max(max_coeff, 1.0)))) + 1;
+        max_coeff_bit_count = static_cast<int>(std::ceil(std::log2(std::max(max_coeff, 1.0)))) + 1;
         if (max_coeff_bit_count >= context_data.total_coeff_modulus_bit_count()) {
             throw std::invalid_argument("encoded values are too large");
         }
