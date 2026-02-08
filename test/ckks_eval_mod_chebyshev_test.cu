@@ -38,6 +38,12 @@ namespace {
         expect_invalid_argument(
                 [&]() { (void) generate_eval_mod_chebyshev_coefficients(bad_range); },
                 "invalid chebyshev range should be rejected");
+
+        CKKSBootstrapConfig bad_method;
+        bad_method.eval_mod_method = static_cast<CKKSEvalModMethod>(999);
+        expect_invalid_argument(
+                [&]() { (void) generate_eval_mod_chebyshev_coefficients(bad_method); },
+                "invalid eval_mod_method should be rejected");
     }
 
     void test_chebyshev_approximation_accuracy() {
@@ -68,6 +74,10 @@ namespace {
         if (max_error > 1e-10) {
             throw std::logic_error("chebyshev approximation error is larger than expected");
         }
+
+        expect_invalid_argument(
+                [&]() { (void) eval_mod_chebyshev_reference(config.chebyshev_max + 1e-6, config, coeffs); },
+                "out-of-range x should be rejected");
     }
 
     void test_chebyshev_odd_symmetry() {

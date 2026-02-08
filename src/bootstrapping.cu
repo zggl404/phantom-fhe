@@ -149,6 +149,39 @@ namespace phantom {
         return t * b_kplus1 - b_kplus2 + coefficients[0];
     }
 
+
+    PhantomCiphertext coeff_to_slot_phase25(const PhantomCiphertext &ciphertext, const PhantomGaloisKey &galois_key) {
+        (void) galois_key;
+        // Phase-2.5 skeleton: keep identity transform until homomorphic DFT matrices are integrated.
+        return ciphertext;
+    }
+
+    PhantomCiphertext eval_mod_chebyshev_phase25(const PhantomCiphertext &ciphertext,
+                                                 const PhantomRelinKey &relin_key,
+                                                 const CKKSBootstrapConfig &config) {
+        (void) relin_key;
+
+        auto coefficients = generate_eval_mod_chebyshev_coefficients(config);
+        const double center = 0.5 * (config.chebyshev_min + config.chebyshev_max);
+        const double quarter = 0.25 * (config.chebyshev_max - config.chebyshev_min);
+
+        // Keep a lightweight runtime sanity check so bad parameters fail early before GPU stages are wired in.
+        const double probe0 = eval_mod_chebyshev_reference(center - quarter, config, coefficients);
+        const double probe1 = eval_mod_chebyshev_reference(center, config, coefficients);
+        const double probe2 = eval_mod_chebyshev_reference(center + quarter, config, coefficients);
+        if (!(std::isfinite(probe0) && std::isfinite(probe1) && std::isfinite(probe2))) {
+            throw std::logic_error("chebyshev EvalMod probe failed");
+        }
+
+        return ciphertext;
+    }
+
+    PhantomCiphertext slot_to_coeff_phase25(const PhantomCiphertext &ciphertext, const PhantomGaloisKey &galois_key) {
+        (void) galois_key;
+        // Phase-2.5 skeleton: keep identity transform until inverse homomorphic DFT is integrated.
+        return ciphertext;
+    }
+
     PhantomCiphertext mod_up_from_q0(const PhantomContext &context, const PhantomCiphertext &ciphertext) {
         validate_mod_up_inputs(context, ciphertext);
 
@@ -202,21 +235,28 @@ namespace phantom {
                                                const PhantomGaloisKey *galois_key,
                                                const PhantomRelinKey *relin_key,
                                                const CKKSBootstrapConfig &config) {
-        (void) galois_key;
-        (void) relin_key;
+        auto raised = mod_up_from_q0(context, ciphertext);
 
-        if (config.enable_eval_mod) {
-            if (config.eval_mod_method != CKKSEvalModMethod::chebyshev) {
-                throw std::invalid_argument("regular_bootstrapping_v2 only supports Chebyshev EvalMod");
-            }
-
-            // Phase-2 guard: Chebyshev kernel is ready, but full EvalMod requires CoeffToSlot/SlotToCoeff integration.
-            (void) generate_eval_mod_chebyshev_coefficients(config);
-            throw std::invalid_argument("regular_bootstrapping_v2 EvalMod integration is not finished yet");
+        if (!config.enable_eval_mod) {
+            return raised;
         }
 
-        // Phase-1 MVP: keep HEonGPU v2's centered ModRaise behavior as the correctness-critical foundation.
-        return mod_up_from_q0(context, ciphertext);
+        if (config.eval_mod_method != CKKSEvalModMethod::chebyshev) {
+            throw std::invalid_argument("regular_bootstrapping_v2 only supports Chebyshev EvalMod");
+        }
+
+        if (galois_key == nullptr) {
+            throw std::invalid_argument("regular_bootstrapping_v2 requires galois_key when EvalMod is enabled");
+        }
+
+        if (relin_key == nullptr) {
+            throw std::invalid_argument("regular_bootstrapping_v2 requires relin_key when EvalMod is enabled");
+        }
+
+        // Phase-2.5 wiring: ModRaise -> CoeffToSlot -> Chebyshev EvalMod -> SlotToCoeff.
+        auto slot_cipher = coeff_to_slot_phase25(raised, *galois_key);
+        auto reduced_slot_cipher = eval_mod_chebyshev_phase25(slot_cipher, *relin_key, config);
+        return slot_to_coeff_phase25(reduced_slot_cipher, *galois_key);
     }
 
 } // namespace phantom

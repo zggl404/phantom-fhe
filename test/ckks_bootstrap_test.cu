@@ -136,6 +136,58 @@ namespace {
                 "regular_bootstrapping_v2 should reject unsupported EvalMod mode");
     }
 
+
+    void test_phase25_eval_mod_pipeline_with_keys() {
+        const auto parms = create_ckks_test_parms();
+        PhantomContext context(parms);
+
+        PhantomSecretKey secret_key(context);
+        PhantomCKKSEncoder encoder(context);
+        auto galois_key = secret_key.create_galois_keys(context);
+        auto relin_key = secret_key.gen_relinkey(context);
+
+        const std::size_t last_chain_index = context.total_parm_size() - 1;
+
+        std::vector<double> input{0.125, -0.25, 0.375, -0.5, 0.625};
+        const double scale = std::pow(2.0, 20);
+
+        auto plain = encoder.encode(context, input, scale, last_chain_index);
+        auto cipher = secret_key.encrypt_symmetric(context, plain);
+
+        CKKSBootstrapConfig config;
+        config.enable_eval_mod = true;
+        config.eval_mod_method = CKKSEvalModMethod::chebyshev;
+        config.chebyshev_degree = 31;
+        config.chebyshev_min = -0.25;
+        config.chebyshev_max = 0.25;
+
+        auto phase25_output = regular_bootstrapping_v2(context, cipher, &galois_key, &relin_key, config);
+        auto mod_up_only = mod_up_from_q0(context, cipher);
+
+        if (phase25_output.size() != mod_up_only.size() ||
+            phase25_output.coeff_modulus_size() != mod_up_only.coeff_modulus_size() ||
+            phase25_output.poly_modulus_degree() != mod_up_only.poly_modulus_degree()) {
+            throw std::logic_error("phase2.5 pipeline output shape mismatch");
+        }
+
+        const std::size_t total_uint64 =
+                phase25_output.size() * phase25_output.coeff_modulus_size() * phase25_output.poly_modulus_degree();
+        std::vector<std::uint64_t> host_phase25(total_uint64, 0);
+        std::vector<std::uint64_t> host_mod_up(total_uint64, 0);
+
+        cudaMemcpyAsync(host_phase25.data(), phase25_output.data(), total_uint64 * sizeof(std::uint64_t),
+                        cudaMemcpyDeviceToHost, cudaStreamPerThread);
+        cudaMemcpyAsync(host_mod_up.data(), mod_up_only.data(), total_uint64 * sizeof(std::uint64_t),
+                        cudaMemcpyDeviceToHost, cudaStreamPerThread);
+        cudaStreamSynchronize(cudaStreamPerThread);
+
+        for (std::size_t i = 0; i < total_uint64; i++) {
+            if (host_phase25[i] != host_mod_up[i]) {
+                throw std::logic_error("phase2.5 pipeline should match ModRaise before DFT integration");
+            }
+        }
+    }
+
     void test_regular_bootstrapping_v2_matches_mod_up() {
         const auto parms = create_ckks_test_parms();
         PhantomContext context(parms);
@@ -194,5 +246,6 @@ int main() {
     test_mod_up_from_q0_centered_boundary();
     test_bootstrap_guard_checks();
     test_regular_bootstrapping_v2_matches_mod_up();
+    test_phase25_eval_mod_pipeline_with_keys();
     return 0;
 }
