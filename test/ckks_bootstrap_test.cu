@@ -137,6 +137,63 @@ namespace {
     }
 
 
+
+    void test_linear_transform_naive_identity() {
+        const auto parms = create_ckks_test_parms();
+        PhantomContext context(parms);
+
+        PhantomSecretKey secret_key(context);
+        PhantomCKKSEncoder encoder(context);
+        auto galois_key = secret_key.create_galois_keys(context);
+
+        std::vector<double> input{1.25, -2.5, 3.75, -4.125, 5.5};
+        const double scale = std::pow(2.0, 20);
+
+        auto plain = encoder.encode(context, input, scale, context.total_parm_size() - 1);
+        auto cipher = secret_key.encrypt_symmetric(context, plain);
+
+        const std::size_t slot_count = encoder.slot_count();
+        std::vector<cuDoubleComplex> identity_diag(slot_count, make_cuDoubleComplex(1.0, 0.0));
+        auto transformed = apply_linear_transform_naive(context, cipher, galois_key, {0}, {identity_diag}, 1.0);
+
+        auto plain_out = secret_key.decrypt(context, transformed);
+        auto output = encoder.decode<double>(context, plain_out);
+
+        for (std::size_t i = 0; i < input.size(); i++) {
+            if (std::fabs(output[i] - input[i]) > 1e-3) {
+                throw std::logic_error("linear transform identity validation failed");
+            }
+        }
+    }
+
+    void test_linear_transform_naive_negation() {
+        const auto parms = create_ckks_test_parms();
+        PhantomContext context(parms);
+
+        PhantomSecretKey secret_key(context);
+        PhantomCKKSEncoder encoder(context);
+        auto galois_key = secret_key.create_galois_keys(context);
+
+        std::vector<double> input{0.75, -1.0, 1.5, -2.25, 3.0};
+        const double scale = std::pow(2.0, 20);
+
+        auto plain = encoder.encode(context, input, scale, context.total_parm_size() - 1);
+        auto cipher = secret_key.encrypt_symmetric(context, plain);
+
+        const std::size_t slot_count = encoder.slot_count();
+        std::vector<cuDoubleComplex> neg_diag(slot_count, make_cuDoubleComplex(-1.0, 0.0));
+        auto transformed = apply_linear_transform_naive(context, cipher, galois_key, {0}, {neg_diag}, 1.0);
+
+        auto plain_out = secret_key.decrypt(context, transformed);
+        auto output = encoder.decode<double>(context, plain_out);
+
+        for (std::size_t i = 0; i < input.size(); i++) {
+            if (std::fabs(output[i] + input[i]) > 1e-3) {
+                throw std::logic_error("linear transform negation validation failed");
+            }
+        }
+    }
+
     void test_phase25_eval_mod_pipeline_with_keys() {
         const auto parms = create_ckks_test_parms();
         PhantomContext context(parms);
@@ -170,20 +227,15 @@ namespace {
             throw std::logic_error("phase2.5 pipeline output shape mismatch");
         }
 
-        const std::size_t total_uint64 =
-                phase25_output.size() * phase25_output.coeff_modulus_size() * phase25_output.poly_modulus_degree();
-        std::vector<std::uint64_t> host_phase25(total_uint64, 0);
-        std::vector<std::uint64_t> host_mod_up(total_uint64, 0);
+        auto plain_phase25 = secret_key.decrypt(context, phase25_output);
+        auto plain_mod_up = secret_key.decrypt(context, mod_up_only);
 
-        cudaMemcpyAsync(host_phase25.data(), phase25_output.data(), total_uint64 * sizeof(std::uint64_t),
-                        cudaMemcpyDeviceToHost, cudaStreamPerThread);
-        cudaMemcpyAsync(host_mod_up.data(), mod_up_only.data(), total_uint64 * sizeof(std::uint64_t),
-                        cudaMemcpyDeviceToHost, cudaStreamPerThread);
-        cudaStreamSynchronize(cudaStreamPerThread);
+        auto decoded_phase25 = encoder.decode<double>(context, plain_phase25);
+        auto decoded_mod_up = encoder.decode<double>(context, plain_mod_up);
 
-        for (std::size_t i = 0; i < total_uint64; i++) {
-            if (host_phase25[i] != host_mod_up[i]) {
-                throw std::logic_error("phase2.5 pipeline should match ModRaise before DFT integration");
+        for (std::size_t i = 0; i < input.size(); i++) {
+            if (std::fabs(decoded_phase25[i] - decoded_mod_up[i]) > 1e-3) {
+                throw std::logic_error("phase2.5 pipeline should match ModRaise semantics before DFT integration");
             }
         }
     }
@@ -245,6 +297,8 @@ namespace {
 int main() {
     test_mod_up_from_q0_centered_boundary();
     test_bootstrap_guard_checks();
+    test_linear_transform_naive_identity();
+    test_linear_transform_naive_negation();
     test_regular_bootstrapping_v2_matches_mod_up();
     test_phase25_eval_mod_pipeline_with_keys();
     return 0;

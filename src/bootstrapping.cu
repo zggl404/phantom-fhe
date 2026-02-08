@@ -2,7 +2,9 @@
 
 #include <cstdint>
 
+#include "ckks.h"
 #include "common.h"
+#include "evaluate.cuh"
 #include "ntt.cuh"
 #include "uintmodmath.cuh"
 
@@ -150,10 +152,74 @@ namespace phantom {
     }
 
 
-    PhantomCiphertext coeff_to_slot_phase25(const PhantomCiphertext &ciphertext, const PhantomGaloisKey &galois_key) {
-        (void) galois_key;
-        // Phase-2.5 skeleton: keep identity transform until homomorphic DFT matrices are integrated.
-        return ciphertext;
+
+    PhantomCiphertext apply_linear_transform_naive(
+            const PhantomContext &context,
+            const PhantomCiphertext &ciphertext,
+            const PhantomGaloisKey &galois_key,
+            const std::vector<int> &steps,
+            const std::vector<std::vector<cuDoubleComplex>> &diagonals,
+            double plain_scale) {
+        if (steps.empty() || diagonals.empty()) {
+            throw std::invalid_argument("linear transform cannot be empty");
+        }
+
+        if (steps.size() != diagonals.size()) {
+            throw std::invalid_argument("linear transform steps and diagonals size mismatch");
+        }
+
+        if (plain_scale <= 0.0) {
+            throw std::invalid_argument("plain_scale must be positive");
+        }
+
+        const auto &context_data = context.get_context_data(ciphertext.chain_index());
+        if (context_data.parms().scheme() != scheme_type::ckks) {
+            throw std::invalid_argument("linear transform only supports CKKS");
+        }
+
+        const std::size_t slot_count = context_data.parms().poly_modulus_degree() >> 1;
+
+        PhantomCKKSEncoder encoder(context);
+
+        PhantomCiphertext acc;
+        bool initialized = false;
+
+        for (std::size_t i = 0; i < steps.size(); i++) {
+            const auto &diagonal = diagonals[i];
+            if (diagonal.empty() || diagonal.size() > slot_count) {
+                throw std::invalid_argument("invalid diagonal size");
+            }
+
+            std::vector<cuDoubleComplex> padded_diagonal(slot_count, make_cuDoubleComplex(0.0, 0.0));
+            for (std::size_t j = 0; j < diagonal.size(); j++) {
+                padded_diagonal[j] = diagonal[j];
+            }
+
+            auto plain = encoder.encode(context, padded_diagonal, plain_scale, ciphertext.chain_index());
+
+            auto rotated = (steps[i] == 0)
+                           ? ciphertext
+                           : rotate(context, ciphertext, steps[i], galois_key);
+            multiply_plain_inplace(context, rotated, plain);
+
+            if (!initialized) {
+                acc = std::move(rotated);
+                initialized = true;
+            } else {
+                add_inplace(context, acc, rotated);
+            }
+        }
+
+        return acc;
+    }
+
+    PhantomCiphertext coeff_to_slot_phase25(const PhantomContext &context,
+                                            const PhantomCiphertext &ciphertext,
+                                            const PhantomGaloisKey &galois_key) {
+        const std::size_t slot_count =
+                context.get_context_data(ciphertext.chain_index()).parms().poly_modulus_degree() >> 1;
+        std::vector<cuDoubleComplex> identity_diag(slot_count, make_cuDoubleComplex(1.0, 0.0));
+        return apply_linear_transform_naive(context, ciphertext, galois_key, {0}, {identity_diag}, 1.0);
     }
 
     PhantomCiphertext eval_mod_chebyshev_phase25(const PhantomCiphertext &ciphertext,
@@ -176,10 +242,13 @@ namespace phantom {
         return ciphertext;
     }
 
-    PhantomCiphertext slot_to_coeff_phase25(const PhantomCiphertext &ciphertext, const PhantomGaloisKey &galois_key) {
-        (void) galois_key;
-        // Phase-2.5 skeleton: keep identity transform until inverse homomorphic DFT is integrated.
-        return ciphertext;
+    PhantomCiphertext slot_to_coeff_phase25(const PhantomContext &context,
+                                            const PhantomCiphertext &ciphertext,
+                                            const PhantomGaloisKey &galois_key) {
+        const std::size_t slot_count =
+                context.get_context_data(ciphertext.chain_index()).parms().poly_modulus_degree() >> 1;
+        std::vector<cuDoubleComplex> identity_diag(slot_count, make_cuDoubleComplex(1.0, 0.0));
+        return apply_linear_transform_naive(context, ciphertext, galois_key, {0}, {identity_diag}, 1.0);
     }
 
     PhantomCiphertext mod_up_from_q0(const PhantomContext &context, const PhantomCiphertext &ciphertext) {
@@ -254,9 +323,9 @@ namespace phantom {
         }
 
         // Phase-2.5 wiring: ModRaise -> CoeffToSlot -> Chebyshev EvalMod -> SlotToCoeff.
-        auto slot_cipher = coeff_to_slot_phase25(raised, *galois_key);
+        auto slot_cipher = coeff_to_slot_phase25(context, raised, *galois_key);
         auto reduced_slot_cipher = eval_mod_chebyshev_phase25(slot_cipher, *relin_key, config);
-        return slot_to_coeff_phase25(reduced_slot_cipher, *galois_key);
+        return slot_to_coeff_phase25(context, reduced_slot_cipher, *galois_key);
     }
 
 } // namespace phantom

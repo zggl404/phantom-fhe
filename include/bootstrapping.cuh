@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cuComplex.h>
 #include <vector>
 
 #include "ciphertext.h"
@@ -33,6 +34,16 @@ namespace phantom {
     // Evaluate Chebyshev series at x using Clenshaw recurrence on [chebyshev_min, chebyshev_max].
     double eval_mod_chebyshev_reference(double x, const CKKSBootstrapConfig &config,
                                         const std::vector<double> &coefficients);
+
+
+    // Naive diagonal linear transform for CKKS ciphertexts (phase-3 foundation, correctness-first).
+    PhantomCiphertext apply_linear_transform_naive(
+            const PhantomContext &context,
+            const PhantomCiphertext &ciphertext,
+            const PhantomGaloisKey &galois_key,
+            const std::vector<int> &steps,
+            const std::vector<std::vector<cuDoubleComplex>> &diagonals,
+            double plain_scale);
 
     // Raise a ciphertext from the last CKKS level (single-q0) to the first data level using centered representation.
     PhantomCiphertext mod_up_from_q0(const PhantomContext &context, const PhantomCiphertext &ciphertext);
