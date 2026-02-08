@@ -18,6 +18,10 @@ add_executable(ckks_bootstrap_test ckks_bootstrap_test.cu)
 target_link_libraries(ckks_bootstrap_test Phantom)
 target_include_directories(ckks_bootstrap_test PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
+add_executable(ckks_eval_mod_chebyshev_test ckks_eval_mod_chebyshev_test.cu)
+target_link_libraries(ckks_eval_mod_chebyshev_test Phantom)
+target_include_directories(ckks_eval_mod_chebyshev_test PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
 # find CUDAToolkit to enable cuFFT
 find_package(CUDAToolkit REQUIRED)
 

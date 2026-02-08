@@ -1,5 +1,7 @@
 #include "bootstrapping.cuh"
 
+#include <cstdint>
+
 #include "common.h"
 #include "ntt.cuh"
 #include "uintmodmath.cuh"
@@ -10,8 +12,29 @@ using namespace phantom::util;
 
 namespace {
 
+    constexpr double kPi = 3.141592653589793238462643383279502884;
+
     inline std::uint64_t ceil_div_uint64(std::uint64_t numerator, std::uint64_t denominator) {
         return (numerator + denominator - 1) / denominator;
+    }
+
+    inline double eval_mod_target(double x) {
+        // Target function used in CKKS EvalMod: sin(2*pi*x)/(2*pi)
+        return std::sin(2.0 * kPi * x) / (2.0 * kPi);
+    }
+
+    void validate_chebyshev_config(const CKKSBootstrapConfig &config) {
+        if (config.chebyshev_degree == 0) {
+            throw std::invalid_argument("chebyshev_degree must be greater than zero");
+        }
+
+        if (!(config.chebyshev_min < config.chebyshev_max)) {
+            throw std::invalid_argument("chebyshev range is invalid");
+        }
+
+        if (config.eval_mod_method != CKKSEvalModMethod::chebyshev) {
+            throw std::invalid_argument("only Chebyshev EvalMod is supported");
+        }
     }
 
     __global__ void mod_raise_centered_kernel(const std::uint64_t *input,
@@ -67,6 +90,64 @@ namespace {
 } // namespace
 
 namespace phantom {
+
+    std::vector<double> generate_eval_mod_chebyshev_coefficients(const CKKSBootstrapConfig &config) {
+        validate_chebyshev_config(config);
+
+        const std::size_t degree = config.chebyshev_degree;
+        const std::size_t sample_count = degree + 1;
+        const double a = config.chebyshev_min;
+        const double b = config.chebyshev_max;
+
+        std::vector<double> coefficients(degree + 1, 0.0);
+
+        for (std::size_t k = 0; k <= degree; k++) {
+            double sum = 0.0;
+            for (std::size_t j = 0; j < sample_count; j++) {
+                const double theta = (static_cast<double>(j) + 0.5) * kPi / static_cast<double>(sample_count);
+                const double t = std::cos(theta);
+                const double x = 0.5 * (a + b) + 0.5 * (b - a) * t;
+                sum += eval_mod_target(x) * std::cos(static_cast<double>(k) * theta);
+            }
+            coefficients[k] = 2.0 * sum / static_cast<double>(sample_count);
+        }
+
+        // Chebyshev series convention: f(x)=c0 + c1*T1(x) + ..., where c0 is halved from DCT result.
+        coefficients[0] *= 0.5;
+        return coefficients;
+    }
+
+    double eval_mod_chebyshev_reference(double x, const CKKSBootstrapConfig &config,
+                                        const std::vector<double> &coefficients) {
+        validate_chebyshev_config(config);
+
+        if (coefficients.empty()) {
+            throw std::invalid_argument("coefficients cannot be empty");
+        }
+
+        if (coefficients.size() != config.chebyshev_degree + 1) {
+            throw std::invalid_argument("coefficients size does not match chebyshev_degree");
+        }
+
+        if (x < config.chebyshev_min || x > config.chebyshev_max) {
+            throw std::invalid_argument("x is out of chebyshev approximation range");
+        }
+
+        const double a = config.chebyshev_min;
+        const double b = config.chebyshev_max;
+        const double t = (2.0 * x - (a + b)) / (b - a);
+
+        double b_kplus1 = 0.0;
+        double b_kplus2 = 0.0;
+
+        for (std::int64_t idx = static_cast<std::int64_t>(coefficients.size()) - 1; idx >= 1; idx--) {
+            const double b_k = 2.0 * t * b_kplus1 - b_kplus2 + coefficients[static_cast<std::size_t>(idx)];
+            b_kplus2 = b_kplus1;
+            b_kplus1 = b_k;
+        }
+
+        return t * b_kplus1 - b_kplus2 + coefficients[0];
+    }
 
     PhantomCiphertext mod_up_from_q0(const PhantomContext &context, const PhantomCiphertext &ciphertext) {
         validate_mod_up_inputs(context, ciphertext);
@@ -125,10 +206,16 @@ namespace phantom {
         (void) relin_key;
 
         if (config.enable_eval_mod) {
-            throw std::invalid_argument("regular_bootstrapping_v2 EvalMod phase is not implemented yet");
+            if (config.eval_mod_method != CKKSEvalModMethod::chebyshev) {
+                throw std::invalid_argument("regular_bootstrapping_v2 only supports Chebyshev EvalMod");
+            }
+
+            // Phase-2 guard: Chebyshev kernel is ready, but full EvalMod requires CoeffToSlot/SlotToCoeff integration.
+            (void) generate_eval_mod_chebyshev_coefficients(config);
+            throw std::invalid_argument("regular_bootstrapping_v2 EvalMod integration is not finished yet");
         }
 
-        // Phase 1 MVP: keep HEonGPU v2's centered ModRaise behavior as the correctness-critical foundation.
+        // Phase-1 MVP: keep HEonGPU v2's centered ModRaise behavior as the correctness-critical foundation.
         return mod_up_from_q0(context, ciphertext);
     }
 

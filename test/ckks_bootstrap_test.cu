@@ -136,7 +136,7 @@ namespace {
                 "regular_bootstrapping_v2 should reject unsupported EvalMod mode");
     }
 
-    void test_regular_bootstrapping_v2_round_trip() {
+    void test_regular_bootstrapping_v2_matches_mod_up() {
         const auto parms = create_ckks_test_parms();
         PhantomContext context(parms);
 
@@ -153,6 +153,8 @@ namespace {
         auto cipher = secret_key.encrypt_symmetric(context, plain);
 
         CKKSBootstrapConfig config;
+        // Phase-1 only implements ModRaise, so regular_bootstrapping_v2 should be equivalent to mod_up_from_q0.
+        auto mod_up_only = mod_up_from_q0(context, cipher);
         auto bootstrapped = regular_bootstrapping_v2(context, cipher, nullptr, nullptr, config);
 
         if (bootstrapped.chain_index() != first_chain_index) {
@@ -162,12 +164,26 @@ namespace {
             throw std::logic_error("regular_bootstrapping_v2 should return NTT-form ciphertext");
         }
 
-        auto plain_out = secret_key.decrypt(context, bootstrapped);
-        auto output = encoder.decode<double>(context, plain_out);
+        if (bootstrapped.size() != mod_up_only.size() ||
+            bootstrapped.coeff_modulus_size() != mod_up_only.coeff_modulus_size() ||
+            bootstrapped.poly_modulus_degree() != mod_up_only.poly_modulus_degree()) {
+            throw std::logic_error("regular_bootstrapping_v2 output shape mismatch");
+        }
 
-        for (std::size_t i = 0; i < input.size(); i++) {
-            if (std::fabs(output[i] - input[i]) > 5e-2) {
-                throw std::logic_error("regular_bootstrapping_v2 round-trip validation failed");
+        const std::size_t total_uint64 =
+                bootstrapped.size() * bootstrapped.coeff_modulus_size() * bootstrapped.poly_modulus_degree();
+        std::vector<std::uint64_t> host_boot(total_uint64, 0);
+        std::vector<std::uint64_t> host_mod_up(total_uint64, 0);
+
+        cudaMemcpyAsync(host_boot.data(), bootstrapped.data(), total_uint64 * sizeof(std::uint64_t),
+                        cudaMemcpyDeviceToHost, cudaStreamPerThread);
+        cudaMemcpyAsync(host_mod_up.data(), mod_up_only.data(), total_uint64 * sizeof(std::uint64_t),
+                        cudaMemcpyDeviceToHost, cudaStreamPerThread);
+        cudaStreamSynchronize(cudaStreamPerThread);
+
+        for (std::size_t i = 0; i < total_uint64; i++) {
+            if (host_boot[i] != host_mod_up[i]) {
+                throw std::logic_error("regular_bootstrapping_v2 does not match mod_up_from_q0 in phase-1 MVP");
             }
         }
     }
@@ -177,6 +193,6 @@ namespace {
 int main() {
     test_mod_up_from_q0_centered_boundary();
     test_bootstrap_guard_checks();
-    test_regular_bootstrapping_v2_round_trip();
+    test_regular_bootstrapping_v2_matches_mod_up();
     return 0;
 }
