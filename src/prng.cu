@@ -175,12 +175,12 @@ __global__ void sample_uniform_poly(uint64_t *out, const uint8_t *prng_seed, con
                                     const uint64_t poly_degree, const uint64_t coeff_mod_size) {
     uint8_t tmp[64];
     uint64_t *rnd = (uint64_t *) tmp;
-    size_t index = 0;
-    size_t tries = 0;
     constexpr uint64_t max_random = static_cast<uint64_t>(0xFFFFFFFFFFFFFFFFULL);
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x;
          tid < (poly_degree >> 3) * coeff_mod_size; // 8 = 2^3, one PRNG invocation generates 64 bytes, i.e, 8 uint64_t.
          tid += blockDim.x * gridDim.x) {
+        size_t index = 0;
+        size_t tries = 0;
         int twr = tid / (poly_degree >> 3);
         DModulus mod = modulus[twr];
 

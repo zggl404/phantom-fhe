@@ -41,14 +41,16 @@ private:
     void decode_internal(const PhantomContext &context,
                          const PhantomPlaintext &plain,
                          std::vector<cuDoubleComplex> &destination,
-                         const cudaStream_t &stream);
+                         const cudaStream_t &stream,
+                         bool sync_output);
 
     inline void decode_internal(const PhantomContext &context,
                                 const PhantomPlaintext &plain,
                                 std::vector<double> &destination,
-                                const cudaStream_t &stream) {
+                                const cudaStream_t &stream,
+                                bool sync_output) {
         std::vector<cuDoubleComplex> output;
-        decode_internal(context, plain, output, stream);
+        decode_internal(context, plain, output, stream, sync_output);
         destination.resize(slots_);
         for (size_t i = 0; i < slots_; i++)
             destination[i] = output[i].x;
@@ -57,6 +59,10 @@ private:
 public:
 
     explicit PhantomCKKSEncoder(const PhantomContext &context);
+
+    static void set_strict_encode_boundary_check(bool enabled);
+
+    [[nodiscard]] static bool strict_encode_boundary_check();
 
     PhantomCKKSEncoder(const PhantomCKKSEncoder &copy) = delete;
 
@@ -95,13 +101,27 @@ public:
     inline void decode(const PhantomContext &context,
                        const PhantomPlaintext &plain,
                        std::vector<T> &destination) {
-        decode_internal(context, plain, destination, cudaStreamPerThread);
+        decode_internal(context, plain, destination, cudaStreamPerThread, true);
+    }
+
+    template<class T>
+    inline void decode_async(const PhantomContext &context,
+                             const PhantomPlaintext &plain,
+                             std::vector<T> &destination) {
+        decode_internal(context, plain, destination, cudaStreamPerThread, false);
     }
 
     template<class T>
     [[nodiscard]] inline auto decode(const PhantomContext &context, const PhantomPlaintext &plain) {
         std::vector<T> destination;
         decode(context, plain, destination);
+        return destination;
+    }
+
+    template<class T>
+    [[nodiscard]] inline auto decode_async(const PhantomContext &context, const PhantomPlaintext &plain) {
+        std::vector<T> destination;
+        decode_async(context, plain, destination);
         return destination;
     }
 

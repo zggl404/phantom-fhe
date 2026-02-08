@@ -97,6 +97,9 @@ PYBIND11_MODULE(pyPhantom, m) {
 
     py::class_<PhantomCKKSEncoder>(m, "ckks_encoder")
             .def(py::init<const PhantomContext &>())
+            .def_static("set_strict_encode_boundary_check", &PhantomCKKSEncoder::set_strict_encode_boundary_check,
+                        py::arg("enabled"))
+            .def_static("strict_encode_boundary_check", &PhantomCKKSEncoder::strict_encode_boundary_check)
             .def("slot_count", &PhantomCKKSEncoder::slot_count)
             .def("encode_complex_vector",
                  py::overload_cast<const PhantomContext &, const std::vector<cuDoubleComplex> &, double, size_t>(
@@ -113,7 +116,14 @@ PYBIND11_MODULE(pyPhantom, m) {
                  py::arg(), py::arg())
             .def("decode_double_vector",
                  py::overload_cast<const PhantomContext &, const PhantomPlaintext &>(
-                         &PhantomCKKSEncoder::decode<double>), py::arg(), py::arg());
+                         &PhantomCKKSEncoder::decode<double>), py::arg(), py::arg())
+            .def("decode_complex_vector_async",
+                 py::overload_cast<const PhantomContext &, const PhantomPlaintext &>(
+                         &PhantomCKKSEncoder::decode_async<cuDoubleComplex>),
+                 py::arg(), py::arg())
+            .def("decode_double_vector_async",
+                 py::overload_cast<const PhantomContext &, const PhantomPlaintext &>(
+                         &PhantomCKKSEncoder::decode_async<double>), py::arg(), py::arg());
 
     py::class_<PhantomPlaintext>(m, "plaintext")
             .def(py::init<>());
