@@ -2,6 +2,10 @@ add_executable(ntt_test ntt_test.cu)
 target_link_libraries(ntt_test Phantom)
 target_include_directories(ntt_test PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
+add_executable(context_test context_test.cu)
+target_link_libraries(context_test Phantom)
+target_include_directories(context_test PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
 # find CUDAToolkit to enable cuFFT
 find_package(CUDAToolkit REQUIRED)
 

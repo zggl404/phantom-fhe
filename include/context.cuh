@@ -195,7 +195,7 @@ public:
         if (context_data_size == 0) {
             throw std::invalid_argument("context_data is null!");
         }
-        return context_data_[static_cast<size_t>(1)];
+        return context_data_[first_parm_index_];
     }
 
     [[nodiscard]] auto &last_context_data() const {
