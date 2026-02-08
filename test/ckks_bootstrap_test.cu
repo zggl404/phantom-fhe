@@ -1,0 +1,182 @@
+#include "phantom.h"
+
+#include <cmath>
+#include <stdexcept>
+#include <vector>
+
+using namespace phantom;
+using namespace phantom::arith;
+
+namespace {
+
+    EncryptionParameters create_ckks_test_parms() {
+        EncryptionParameters parms(scheme_type::ckks);
+        const std::size_t poly_modulus_degree = 8192;
+        parms.set_poly_modulus_degree(poly_modulus_degree);
+        parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, {50, 40, 40, 50}));
+        return parms;
+    }
+
+
+    template<typename Func>
+    void expect_invalid_argument(Func &&func, const char *message) {
+        try {
+            func();
+        } catch (const std::invalid_argument &) {
+            return;
+        }
+        throw std::logic_error(message);
+    }
+
+    std::uint64_t centered_mod_raise_expected(std::uint64_t value, std::uint64_t q0, std::uint64_t qi) {
+        if (value >= (q0 >> 1)) {
+            const std::uint64_t delta = q0 - value;
+            const std::uint64_t reduced = delta % qi;
+            return (reduced == 0) ? 0 : (qi - reduced);
+        }
+        return value % qi;
+    }
+
+    void test_mod_up_from_q0_centered_boundary() {
+        const auto parms = create_ckks_test_parms();
+        PhantomContext context(parms);
+
+        const auto last_chain_index = context.total_parm_size() - 1;
+        const auto first_chain_index = context.get_first_index();
+        const auto &last_context_data = context.get_context_data(last_chain_index);
+        const auto &first_context_data = context.get_context_data(first_chain_index);
+
+        const std::size_t n = last_context_data.parms().poly_modulus_degree();
+        const std::uint64_t q0 = last_context_data.parms().coeff_modulus().front().value();
+        const auto &q = first_context_data.parms().coeff_modulus();
+
+        std::vector<std::uint64_t> boundary_values = {
+                0,
+                1,
+                (q0 >> 1) - 1,
+                (q0 >> 1),
+                q0 - 1};
+
+        PhantomCiphertext input;
+        input.resize(context, last_chain_index, 2, cudaStreamPerThread);
+        input.set_ntt_form(false);
+        input.set_scale(1.0);
+
+        std::vector<std::uint64_t> host_input(2 * n, 0);
+        for (std::size_t i = 0; i < boundary_values.size(); i++) {
+            host_input[i] = boundary_values[i];
+            host_input[n + i] = boundary_values[(i + 1) % boundary_values.size()];
+        }
+
+        cudaMemcpyAsync(input.data(), host_input.data(), host_input.size() * sizeof(std::uint64_t),
+                        cudaMemcpyHostToDevice, cudaStreamPerThread);
+        cudaStreamSynchronize(cudaStreamPerThread);
+
+        auto raised = mod_up_from_q0(context, input);
+
+        if (raised.chain_index() != first_chain_index) {
+            throw std::logic_error("mod_up_from_q0 returned invalid chain index");
+        }
+        if (raised.coeff_modulus_size() != q.size()) {
+            throw std::logic_error("mod_up_from_q0 returned invalid coeff modulus size");
+        }
+        if (raised.is_ntt_form()) {
+            throw std::logic_error("mod_up_from_q0 should preserve coefficient form for this test");
+        }
+
+        std::vector<std::uint64_t> host_raised(raised.size() * raised.coeff_modulus_size() * n, 0);
+        cudaMemcpyAsync(host_raised.data(), raised.data(), host_raised.size() * sizeof(std::uint64_t),
+                        cudaMemcpyDeviceToHost, cudaStreamPerThread);
+        cudaStreamSynchronize(cudaStreamPerThread);
+
+        for (std::size_t prime_index = 0; prime_index < q.size(); prime_index++) {
+            const std::uint64_t qi = q[prime_index].value();
+            for (std::size_t i = 0; i < boundary_values.size(); i++) {
+                const auto expected_c0 = centered_mod_raise_expected(boundary_values[i], q0, qi);
+                const auto actual_c0 = host_raised[prime_index * n + i];
+                if (actual_c0 != expected_c0) {
+                    throw std::logic_error("mod_up_from_q0 centered mapping mismatch on c0");
+                }
+
+                const auto c1_value = boundary_values[(i + 1) % boundary_values.size()];
+                const auto expected_c1 = centered_mod_raise_expected(c1_value, q0, qi);
+                const auto c1_base_offset = raised.coeff_modulus_size() * n;
+                const auto actual_c1 = host_raised[c1_base_offset + prime_index * n + i];
+                if (actual_c1 != expected_c1) {
+                    throw std::logic_error("mod_up_from_q0 centered mapping mismatch on c1");
+                }
+            }
+        }
+    }
+
+
+    void test_bootstrap_guard_checks() {
+        const auto parms = create_ckks_test_parms();
+        PhantomContext context(parms);
+
+        PhantomSecretKey secret_key(context);
+        PhantomCKKSEncoder encoder(context);
+
+        std::vector<double> input{0.5, -1.25, 2.0};
+        const double scale = std::pow(2.0, 20);
+
+        auto plain_first = encoder.encode(context, input, scale, context.get_first_index());
+        auto cipher_first = secret_key.encrypt_symmetric(context, plain_first);
+        expect_invalid_argument(
+                [&]() { (void) mod_up_from_q0(context, cipher_first); },
+                "mod_up_from_q0 should reject non-last-chain ciphertext");
+
+        auto plain_last = encoder.encode(context, input, scale, context.total_parm_size() - 1);
+        auto cipher_last = secret_key.encrypt_symmetric(context, plain_last);
+
+        CKKSBootstrapConfig config;
+        config.enable_eval_mod = true;
+        expect_invalid_argument(
+                [&]() { (void) regular_bootstrapping_v2(context, cipher_last, nullptr, nullptr, config); },
+                "regular_bootstrapping_v2 should reject unsupported EvalMod mode");
+    }
+
+    void test_regular_bootstrapping_v2_round_trip() {
+        const auto parms = create_ckks_test_parms();
+        PhantomContext context(parms);
+
+        PhantomSecretKey secret_key(context);
+        PhantomCKKSEncoder encoder(context);
+
+        const std::size_t last_chain_index = context.total_parm_size() - 1;
+        const std::size_t first_chain_index = context.get_first_index();
+
+        std::vector<double> input{0.5, -1.25, 2.0, -3.5, 4.25, -5.75};
+        const double scale = std::pow(2.0, 20);
+
+        auto plain = encoder.encode(context, input, scale, last_chain_index);
+        auto cipher = secret_key.encrypt_symmetric(context, plain);
+
+        CKKSBootstrapConfig config;
+        auto bootstrapped = regular_bootstrapping_v2(context, cipher, nullptr, nullptr, config);
+
+        if (bootstrapped.chain_index() != first_chain_index) {
+            throw std::logic_error("regular_bootstrapping_v2 returned invalid chain index");
+        }
+        if (!bootstrapped.is_ntt_form()) {
+            throw std::logic_error("regular_bootstrapping_v2 should return NTT-form ciphertext");
+        }
+
+        auto plain_out = secret_key.decrypt(context, bootstrapped);
+        auto output = encoder.decode<double>(context, plain_out);
+
+        for (std::size_t i = 0; i < input.size(); i++) {
+            if (std::fabs(output[i] - input[i]) > 5e-2) {
+                throw std::logic_error("regular_bootstrapping_v2 round-trip validation failed");
+            }
+        }
+    }
+
+} // namespace
+
+int main() {
+    test_mod_up_from_q0_centered_boundary();
+    test_bootstrap_guard_checks();
+    test_regular_bootstrapping_v2_round_trip();
+    return 0;
+}
