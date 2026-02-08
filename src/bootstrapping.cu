@@ -16,6 +16,7 @@ namespace {
 
     constexpr double kPi = 3.141592653589793238462643383279502884;
     constexpr std::size_t kNaiveDftSlotThreshold = 64;
+    constexpr std::size_t kMinEvalModPolyDegree = 2048;
     constexpr double kLinearTransformPlainScale = 1048576.0; // 2^20
 
     inline std::uint64_t ceil_div_uint64(std::uint64_t numerator, std::uint64_t denominator) {
@@ -367,6 +368,12 @@ namespace phantom {
 
         if (relin_key == nullptr) {
             throw std::invalid_argument("regular_bootstrapping_v2 requires relin_key when EvalMod is enabled");
+        }
+
+        const std::size_t poly_modulus_degree =
+                context.get_context_data(raised.chain_index()).parms().poly_modulus_degree();
+        if (poly_modulus_degree < kMinEvalModPolyDegree) {
+            throw std::invalid_argument("regular_bootstrapping_v2 EvalMod requires poly_modulus_degree >= 2048");
         }
 
         // Phase-3.2 wiring: ModRaise -> CoeffToSlot -> Chebyshev EvalMod -> SlotToCoeff.

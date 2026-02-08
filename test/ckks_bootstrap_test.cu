@@ -20,12 +20,19 @@ namespace {
 
     EncryptionParameters create_ckks_phase32_parms() {
         EncryptionParameters parms(scheme_type::ckks);
-        const std::size_t poly_modulus_degree = 128;
+        const std::size_t poly_modulus_degree = 2048;
         parms.set_poly_modulus_degree(poly_modulus_degree);
         parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, {40, 30, 30, 40}));
         return parms;
     }
 
+    EncryptionParameters create_ckks_unsupported_evalmod_parms() {
+        EncryptionParameters parms(scheme_type::ckks);
+        const std::size_t poly_modulus_degree = 1024;
+        parms.set_poly_modulus_degree(poly_modulus_degree);
+        parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, {40, 30, 40}));
+        return parms;
+    }
 
     template<typename Func>
     void expect_invalid_argument(Func &&func, const char *message) {
@@ -204,7 +211,41 @@ namespace {
     }
 
 
-    void test_phase32_small_dft_roundtrip() {
+    void test_phase32_unsupported_degree_guard() {
+        const auto parms = create_ckks_unsupported_evalmod_parms();
+        PhantomContext context(parms);
+
+        PhantomSecretKey secret_key(context);
+        auto galois_key = secret_key.create_galois_keys(context);
+        auto relin_key = secret_key.gen_relinkey(context);
+
+        const std::size_t last_chain_index = context.total_parm_size() - 1;
+        const std::size_t coeff_count = context.get_context_data(last_chain_index).parms().poly_modulus_degree();
+
+        PhantomCiphertext cipher;
+        cipher.resize(context, last_chain_index, 2, cudaStreamPerThread);
+        cipher.set_ntt_form(false);
+        cipher.set_scale(std::pow(2.0, 10));
+
+        std::vector<std::uint64_t> host_input(2 * coeff_count, 0);
+        for (std::size_t i = 0; i < coeff_count; i++) {
+            host_input[i] = static_cast<std::uint64_t>(i & 1U);
+            host_input[coeff_count + i] = static_cast<std::uint64_t>((i + 1U) & 1U);
+        }
+        cudaMemcpyAsync(cipher.data(), host_input.data(), host_input.size() * sizeof(std::uint64_t),
+                        cudaMemcpyHostToDevice, cudaStreamPerThread);
+        cudaStreamSynchronize(cudaStreamPerThread);
+
+        CKKSBootstrapConfig config;
+        config.enable_eval_mod = true;
+        config.eval_mod_method = CKKSEvalModMethod::chebyshev;
+
+        expect_invalid_argument(
+                [&]() { (void) regular_bootstrapping_v2(context, cipher, &galois_key, &relin_key, config); },
+                "regular_bootstrapping_v2 should reject unsupported poly_modulus_degree for EvalMod");
+    }
+
+    void test_phase32_supported_degree_roundtrip() {
         const auto parms = create_ckks_phase32_parms();
         PhantomContext context(parms);
 
@@ -239,7 +280,7 @@ namespace {
 
         for (std::size_t i = 0; i < input.size(); i++) {
             if (std::fabs(decoded_phase32[i] - decoded_mod_up[i]) > 1e-1) {
-                throw std::logic_error("phase3.2 small-slot DFT round-trip validation failed");
+                throw std::logic_error("phase3.2 fallback round-trip validation failed");
             }
         }
     }
@@ -350,7 +391,8 @@ int main() {
     test_linear_transform_naive_identity();
     test_linear_transform_naive_negation();
     test_regular_bootstrapping_v2_matches_mod_up();
-    test_phase32_small_dft_roundtrip();
+    test_phase32_unsupported_degree_guard();
+    test_phase32_supported_degree_roundtrip();
     test_phase25_eval_mod_pipeline_with_keys();
     return 0;
 }
