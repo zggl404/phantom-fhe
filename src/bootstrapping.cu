@@ -15,6 +15,8 @@ using namespace phantom::util;
 namespace {
 
     constexpr double kPi = 3.141592653589793238462643383279502884;
+    constexpr std::size_t kNaiveDftSlotThreshold = 64;
+    constexpr double kLinearTransformPlainScale = 1048576.0; // 2^20
 
     inline std::uint64_t ceil_div_uint64(std::uint64_t numerator, std::uint64_t denominator) {
         return (numerator + denominator - 1) / denominator;
@@ -153,6 +155,32 @@ namespace phantom {
 
 
 
+    void build_dft_diagonal_plan(std::size_t slot_count, bool inverse,
+                                 std::vector<int> &steps,
+                                 std::vector<std::vector<cuDoubleComplex>> &diagonals) {
+        if (slot_count == 0) {
+            throw std::invalid_argument("slot_count cannot be zero");
+        }
+
+        const double norm = 1.0 / std::sqrt(static_cast<double>(slot_count));
+        const double sign = inverse ? 1.0 : -1.0;
+
+        steps.resize(slot_count);
+        diagonals.resize(slot_count);
+
+        for (std::size_t s = 0; s < slot_count; s++) {
+            steps[s] = static_cast<int>(s);
+            diagonals[s].resize(slot_count);
+
+            for (std::size_t row = 0; row < slot_count; row++) {
+                const std::size_t col = (row + s) % slot_count;
+                const double angle = sign * 2.0 * kPi * static_cast<double>(row * col) /
+                                     static_cast<double>(slot_count);
+                diagonals[s][row] = make_cuDoubleComplex(norm * std::cos(angle), norm * std::sin(angle));
+            }
+        }
+    }
+
     PhantomCiphertext apply_linear_transform_naive(
             const PhantomContext &context,
             const PhantomCiphertext &ciphertext,
@@ -218,8 +246,18 @@ namespace phantom {
                                             const PhantomGaloisKey &galois_key) {
         const std::size_t slot_count =
                 context.get_context_data(ciphertext.chain_index()).parms().poly_modulus_degree() >> 1;
-        std::vector<cuDoubleComplex> identity_diag(slot_count, make_cuDoubleComplex(1.0, 0.0));
-        return apply_linear_transform_naive(context, ciphertext, galois_key, {0}, {identity_diag}, 1.0);
+
+        if (slot_count > kNaiveDftSlotThreshold) {
+            // Keep large-parameter path stable until BSGS/hoisting DFT is integrated.
+            std::vector<cuDoubleComplex> identity_diag(slot_count, make_cuDoubleComplex(1.0, 0.0));
+            return apply_linear_transform_naive(context, ciphertext, galois_key, {0}, {identity_diag}, 1.0);
+        }
+
+        std::vector<int> steps;
+        std::vector<std::vector<cuDoubleComplex>> diagonals;
+        build_dft_diagonal_plan(slot_count, false, steps, diagonals);
+        return apply_linear_transform_naive(context, ciphertext, galois_key, steps, diagonals,
+                                            kLinearTransformPlainScale);
     }
 
     PhantomCiphertext eval_mod_chebyshev_phase25(const PhantomCiphertext &ciphertext,
@@ -247,8 +285,17 @@ namespace phantom {
                                             const PhantomGaloisKey &galois_key) {
         const std::size_t slot_count =
                 context.get_context_data(ciphertext.chain_index()).parms().poly_modulus_degree() >> 1;
-        std::vector<cuDoubleComplex> identity_diag(slot_count, make_cuDoubleComplex(1.0, 0.0));
-        return apply_linear_transform_naive(context, ciphertext, galois_key, {0}, {identity_diag}, 1.0);
+
+        if (slot_count > kNaiveDftSlotThreshold) {
+            std::vector<cuDoubleComplex> identity_diag(slot_count, make_cuDoubleComplex(1.0, 0.0));
+            return apply_linear_transform_naive(context, ciphertext, galois_key, {0}, {identity_diag}, 1.0);
+        }
+
+        std::vector<int> steps;
+        std::vector<std::vector<cuDoubleComplex>> diagonals;
+        build_dft_diagonal_plan(slot_count, true, steps, diagonals);
+        return apply_linear_transform_naive(context, ciphertext, galois_key, steps, diagonals,
+                                            kLinearTransformPlainScale);
     }
 
     PhantomCiphertext mod_up_from_q0(const PhantomContext &context, const PhantomCiphertext &ciphertext) {
@@ -322,7 +369,7 @@ namespace phantom {
             throw std::invalid_argument("regular_bootstrapping_v2 requires relin_key when EvalMod is enabled");
         }
 
-        // Phase-2.5 wiring: ModRaise -> CoeffToSlot -> Chebyshev EvalMod -> SlotToCoeff.
+        // Phase-3.2 wiring: ModRaise -> CoeffToSlot -> Chebyshev EvalMod -> SlotToCoeff.
         auto slot_cipher = coeff_to_slot_phase25(context, raised, *galois_key);
         auto reduced_slot_cipher = eval_mod_chebyshev_phase25(slot_cipher, *relin_key, config);
         return slot_to_coeff_phase25(context, reduced_slot_cipher, *galois_key);

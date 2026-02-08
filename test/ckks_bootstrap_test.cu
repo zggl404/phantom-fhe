@@ -18,6 +18,15 @@ namespace {
     }
 
 
+    EncryptionParameters create_ckks_phase32_parms() {
+        EncryptionParameters parms(scheme_type::ckks);
+        const std::size_t poly_modulus_degree = 128;
+        parms.set_poly_modulus_degree(poly_modulus_degree);
+        parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, {40, 30, 30, 40}));
+        return parms;
+    }
+
+
     template<typename Func>
     void expect_invalid_argument(Func &&func, const char *message) {
         try {
@@ -139,7 +148,7 @@ namespace {
 
 
     void test_linear_transform_naive_identity() {
-        const auto parms = create_ckks_test_parms();
+        const auto parms = create_ckks_phase32_parms();
         PhantomContext context(parms);
 
         PhantomSecretKey secret_key(context);
@@ -147,7 +156,7 @@ namespace {
         auto galois_key = secret_key.create_galois_keys(context);
 
         std::vector<double> input{1.25, -2.5, 3.75, -4.125, 5.5};
-        const double scale = std::pow(2.0, 20);
+        const double scale = std::pow(2.0, 15);
 
         auto plain = encoder.encode(context, input, scale, context.total_parm_size() - 1);
         auto cipher = secret_key.encrypt_symmetric(context, plain);
@@ -167,7 +176,7 @@ namespace {
     }
 
     void test_linear_transform_naive_negation() {
-        const auto parms = create_ckks_test_parms();
+        const auto parms = create_ckks_phase32_parms();
         PhantomContext context(parms);
 
         PhantomSecretKey secret_key(context);
@@ -175,7 +184,7 @@ namespace {
         auto galois_key = secret_key.create_galois_keys(context);
 
         std::vector<double> input{0.75, -1.0, 1.5, -2.25, 3.0};
-        const double scale = std::pow(2.0, 20);
+        const double scale = std::pow(2.0, 15);
 
         auto plain = encoder.encode(context, input, scale, context.total_parm_size() - 1);
         auto cipher = secret_key.encrypt_symmetric(context, plain);
@@ -190,6 +199,47 @@ namespace {
         for (std::size_t i = 0; i < input.size(); i++) {
             if (std::fabs(output[i] + input[i]) > 1e-3) {
                 throw std::logic_error("linear transform negation validation failed");
+            }
+        }
+    }
+
+
+    void test_phase32_small_dft_roundtrip() {
+        const auto parms = create_ckks_phase32_parms();
+        PhantomContext context(parms);
+
+        PhantomSecretKey secret_key(context);
+        PhantomCKKSEncoder encoder(context);
+        auto galois_key = secret_key.create_galois_keys(context);
+        auto relin_key = secret_key.gen_relinkey(context);
+
+        const std::size_t last_chain_index = context.total_parm_size() - 1;
+
+        std::vector<double> input{0.03125, -0.0625, 0.09375, -0.125, 0.15625, -0.1875};
+        const double scale = std::pow(2.0, 15);
+
+        auto plain = encoder.encode(context, input, scale, last_chain_index);
+        auto cipher = secret_key.encrypt_symmetric(context, plain);
+
+        CKKSBootstrapConfig config;
+        config.enable_eval_mod = true;
+        config.eval_mod_method = CKKSEvalModMethod::chebyshev;
+        config.chebyshev_degree = 31;
+        config.chebyshev_min = -0.25;
+        config.chebyshev_max = 0.25;
+
+        auto phase32_output = regular_bootstrapping_v2(context, cipher, &galois_key, &relin_key, config);
+        auto mod_up_only = mod_up_from_q0(context, cipher);
+
+        auto plain_phase32 = secret_key.decrypt(context, phase32_output);
+        auto plain_mod_up = secret_key.decrypt(context, mod_up_only);
+
+        auto decoded_phase32 = encoder.decode<double>(context, plain_phase32);
+        auto decoded_mod_up = encoder.decode<double>(context, plain_mod_up);
+
+        for (std::size_t i = 0; i < input.size(); i++) {
+            if (std::fabs(decoded_phase32[i] - decoded_mod_up[i]) > 1e-1) {
+                throw std::logic_error("phase3.2 small-slot DFT round-trip validation failed");
             }
         }
     }
@@ -235,7 +285,7 @@ namespace {
 
         for (std::size_t i = 0; i < input.size(); i++) {
             if (std::fabs(decoded_phase25[i] - decoded_mod_up[i]) > 1e-3) {
-                throw std::logic_error("phase2.5 pipeline should match ModRaise semantics before DFT integration");
+                throw std::logic_error("phase2.5 large-slot fallback should match ModRaise semantics");
             }
         }
     }
@@ -300,6 +350,7 @@ int main() {
     test_linear_transform_naive_identity();
     test_linear_transform_naive_negation();
     test_regular_bootstrapping_v2_matches_mod_up();
+    test_phase32_small_dft_roundtrip();
     test_phase25_eval_mod_pipeline_with_keys();
     return 0;
 }
