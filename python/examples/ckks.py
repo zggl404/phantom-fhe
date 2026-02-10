@@ -36,6 +36,9 @@ ct = phantom.rescale_to_next(context, ct)
 # key-assisted bootstrap (refresh to chain index 1)
 ct = phantom.bootstrap(context, ct, sk, encoder, target_chain_index=1)
 
+# stage-1 true homomorphic bootstrap core (modulus raising only)
+ct = phantom.bootstrap_homomorphic(context, ct, target_chain_index=1)
+
 ct2 = phantom.hoisting(context, ct, glk, [1, 2, 3, 4, 5, 6, 7])
 ct = phantom.add(context, ct, ct2)
 

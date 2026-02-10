@@ -93,3 +93,36 @@ ct_refreshed = phantom.bootstrap(context, ct_in, sk, encoder,
 {% endcode %}
 {% endtab %}
 {% endtabs %}
+
+## CKKS Bootstrap (True Homomorphic Core, Stage-1)
+
+PhantomFHE now provides the first stage of true homomorphic CKKS bootstrap:
+
+- no secret key is required;
+- no decrypt/re-encrypt is involved;
+- it performs modulus raising from low level to target level and resets target scale.
+
+Current status: this is the core stage for full bootstrap, and does not yet include
+the complete `coeff-to-slot -> modular-reduction -> slot-to-coeff` pipeline.
+
+{% tabs %}
+{% tab title="C++" %}
+{% code overflow="wrap" lineNumbers="true" %}
+```cpp
+auto ct_modraised = phantom::bootstrap_homomorphic(context, ct_in,
+                                                   /*target_chain_index=*/1,
+                                                   /*target_scale=*/pow(2.0, 40));
+```
+{% endcode %}
+{% endtab %}
+
+{% tab title="Python" %}
+{% code overflow="wrap" lineNumbers="true" %}
+```python
+ct_modraised = phantom.bootstrap_homomorphic(context, ct_in,
+                                             target_chain_index=1,
+                                             target_scale=2.0 ** 40)
+```
+{% endcode %}
+{% endtab %}
+{% endtabs %}

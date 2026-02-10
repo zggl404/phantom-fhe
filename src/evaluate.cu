@@ -82,6 +82,31 @@ Returns (f, e1, e2) such that
         return are_close<double>(value1.scale(), value2.scale());
     }
 
+    __global__ static void duplicate_with_wrap_kernel(uint64_t *dst, const uint64_t *src_q0,
+                                                      uint64_t q0, const uint64_t *minus_q0,
+                                                      const DModulus *modulus,
+                                                      uint64_t poly_degree, uint64_t coeff_mod_size) {
+        uint64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+        uint64_t total = poly_degree * coeff_mod_size;
+        if (tid >= total) {
+            return;
+        }
+
+        uint64_t mod_idx = tid / poly_degree;
+        uint64_t coeff_idx = tid % poly_degree;
+
+        auto &mod = modulus[mod_idx];
+        uint64_t ql = mod.value();
+        uint64_t coeff = src_q0[coeff_idx];
+        uint64_t lifted = barrett_reduce_uint64_uint64(coeff, ql, mod.const_ratio()[1]);
+
+        if (coeff > (q0 >> 1)) {
+            lifted = add_uint64_uint64_mod(lifted, minus_q0[mod_idx], ql);
+        }
+
+        dst[tid] = lifted;
+    }
+
     static void
     negate_internal(const PhantomContext &context, PhantomCiphertext &encrypted, const cudaStream_t &stream) {
         // Extract encryption parameters.
@@ -1717,6 +1742,108 @@ Returns (f, e1, e2) such that
         PhantomCiphertext refreshed_cipher;
         secret_key.encrypt_symmetric(context, refreshed_plain, refreshed_cipher);
         encrypted = std::move(refreshed_cipher);
+    }
+
+    void bootstrap_homomorphic_inplace(const PhantomContext &context, PhantomCiphertext &encrypted,
+                                       size_t target_chain_index, double target_scale) {
+        auto &curr_context_data = context.get_context_data(encrypted.chain_index());
+        auto &curr_parms = curr_context_data.parms();
+        if (curr_parms.scheme() != scheme_type::ckks) {
+            throw invalid_argument("bootstrap_homomorphic currently supports CKKS only");
+        }
+
+        if (encrypted.size() != 2) {
+            throw invalid_argument("bootstrap_homomorphic supports size-2 ciphertext only");
+        }
+
+        if (!encrypted.is_ntt_form()) {
+            throw invalid_argument("CKKS encrypted must be in NTT form");
+        }
+
+        auto first_index = context.get_first_index();
+        auto total_parm_size = context.total_parm_size();
+        if (target_chain_index < first_index || target_chain_index >= total_parm_size) {
+            throw invalid_argument("target_chain_index out of valid data-level range");
+        }
+
+        auto &target_context_data = context.get_context_data(target_chain_index);
+        auto &target_coeff_modulus = target_context_data.parms().coeff_modulus();
+        if (target_coeff_modulus.empty()) {
+            throw invalid_argument("target coeff_modulus is empty");
+        }
+
+        const auto &s = cudaStreamPerThread;
+        auto poly_degree = curr_parms.poly_modulus_degree();
+
+        PhantomCiphertext source = encrypted;
+        if (source.chain_index() != total_parm_size - 1) {
+            while (source.chain_index() + 1 < total_parm_size) {
+                source = mod_switch_to_next(context, source);
+            }
+        }
+
+        auto &lowest_context_data = context.get_context_data(source.chain_index());
+        auto &lowest_parms = lowest_context_data.parms();
+        auto &lowest_coeff_modulus = lowest_parms.coeff_modulus();
+        if (lowest_coeff_modulus.size() != 1) {
+            throw invalid_argument("homomorphic modulus raising requires the lowest data level with one prime");
+        }
+
+        auto q0 = lowest_coeff_modulus[0].value();
+        auto target_coeff_modulus_size = target_coeff_modulus.size();
+
+        auto coeff_mod_cpu = context.key_context_data().parms().coeff_modulus();
+        std::vector<uint64_t> minus_q0(target_coeff_modulus_size, 0UL);
+        for (size_t l = 1; l < target_coeff_modulus_size; l++) {
+            auto ql = coeff_mod_cpu[l].value();
+            minus_q0[l] = ql - (q0 % ql);
+        }
+
+        auto d_minus_q0 = make_cuda_auto_ptr<uint64_t>(target_coeff_modulus_size, s);
+        cudaMemcpyAsync(d_minus_q0.get(), minus_q0.data(), target_coeff_modulus_size * sizeof(uint64_t),
+                        cudaMemcpyHostToDevice, s);
+
+        auto base_rns = context.gpu_rns_tables().modulus();
+
+        source.set_ntt_form(false);
+        for (size_t i = 0; i < source.size(); i++) {
+            auto *poly_i = source.data() + i * poly_degree;
+            nwt_2d_radix8_backward_inplace(poly_i, context.gpu_rns_tables(), 1, 0, s);
+        }
+
+        PhantomCiphertext raised;
+        raised.resize(context, target_chain_index, source.size(), s);
+        raised.set_ntt_form(false);
+        raised.set_chain_index(target_chain_index);
+        raised.set_scale(source.scale());
+        raised.set_correction_factor(source.correction_factor());
+        raised.SetNoiseScaleDeg(source.GetNoiseScaleDeg());
+
+        uint64_t gridDimGlb = poly_degree * target_coeff_modulus_size / blockDimGlb.x;
+        for (size_t poly_idx = 0; poly_idx < source.size(); poly_idx++) {
+            auto *src_poly = source.data() + poly_idx * poly_degree;
+            auto *dst_poly = raised.data() + poly_idx * target_coeff_modulus_size * poly_degree;
+
+            duplicate_with_wrap_kernel<<<gridDimGlb, blockDimGlb, 0, s>>>(
+                    dst_poly, src_poly, q0, d_minus_q0.get(), base_rns,
+                    poly_degree, target_coeff_modulus_size);
+        }
+
+        nwt_2d_radix8_forward_inplace(raised.data(), context.gpu_rns_tables(), target_coeff_modulus_size, 0, s);
+        raised.set_ntt_form(true);
+
+        if (!(target_scale > 0.0)) {
+            auto min_bit_count = static_cast<int>(target_coeff_modulus[0].bit_count());
+            for (const auto &mod: target_coeff_modulus) {
+                min_bit_count = std::min(min_bit_count, static_cast<int>(mod.bit_count()));
+            }
+            if (min_bit_count <= 2) {
+                throw invalid_argument("target coeff_modulus bit count too small");
+            }
+            target_scale = std::pow(2.0, static_cast<double>(min_bit_count - 2));
+        }
+        raised.set_scale(target_scale);
+        encrypted = std::move(raised);
     }
 
     void hoisting_inplace(const PhantomContext &context, PhantomCiphertext &ct, const PhantomGaloisKey &glk,

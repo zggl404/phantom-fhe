@@ -631,7 +631,7 @@ void example_ckks_bootstrap_refresh(PhantomContext &context, const double &scale
     public_key.encrypt_asymmetric(context, pt, ct);
 
     while (ct.chain_index() + 1 < context.total_parm_size()) {
-        rescale_to_next_inplace(context, ct);
+        mod_switch_to_next_inplace(context, ct);
     }
 
     std::cout << "Before bootstrap: chain_index=" << ct.chain_index()
@@ -652,6 +652,44 @@ void example_ckks_bootstrap_refresh(PhantomContext &context, const double &scale
     }
     if (!correctness) {
         throw std::logic_error("CKKS bootstrap refresh error");
+    }
+}
+
+void example_ckks_bootstrap_homomorphic_core(PhantomContext &context, const double &scale) {
+    std::cout << "Example: CKKS Bootstrap Homomorphic Core (stage-1 modulus raising)" << std::endl;
+
+    PhantomSecretKey secret_key(context);
+    PhantomPublicKey public_key = secret_key.gen_publickey(context);
+    PhantomCKKSEncoder encoder(context);
+
+    size_t slot_count = encoder.slot_count();
+    std::vector<double> input(slot_count, 0.0);
+    for (size_t i = 0; i < std::min<size_t>(slot_count, 16); i++) {
+        input[i] = static_cast<double>(i + 1) / 16.0;
+    }
+
+    PhantomPlaintext pt;
+    encoder.encode(context, input, scale, pt, 1);
+
+    PhantomCiphertext ct;
+    public_key.encrypt_asymmetric(context, pt, ct);
+
+    while (ct.chain_index() + 1 < context.total_parm_size()) {
+        rescale_to_next_inplace(context, ct);
+    }
+
+    auto before_index = ct.chain_index();
+    auto before_scale_log = log2(ct.scale());
+
+    bootstrap_homomorphic_inplace(context, ct, 1, scale);
+
+    std::cout << "Before homomorphic bootstrap core: chain_index=" << before_index
+              << ", log2(scale)=" << before_scale_log << std::endl;
+    std::cout << "After homomorphic bootstrap core: chain_index=" << ct.chain_index()
+              << ", log2(scale)=" << log2(ct.scale()) << std::endl;
+
+    if (ct.chain_index() != 1) {
+        throw std::logic_error("homomorphic bootstrap core chain_index mismatch");
     }
 }
 
@@ -805,6 +843,7 @@ void examples_ckks() {
         example_ckks_mul(context, scale);
         example_ckks_rotation(context, scale);
         example_ckks_bootstrap_refresh(context, scale);
+        example_ckks_bootstrap_homomorphic_core(context, scale);
     }
 
     example_ckks_small_param();

@@ -35,6 +35,7 @@ Nowadays there are a variety of applications based on homomorphic encryption to 
 
 * Native GPU acceleration (for NVIDIA GPUs)
 * Support word-wise schemes including BGV, BFV, and CKKS
+* Support key-assisted CKKS bootstrap refresh API and stage-1 true homomorphic bootstrap core (modulus raising)
 * SOTA performance in most operations
 * Easy to integrate with applications (PPML, etc.)
 

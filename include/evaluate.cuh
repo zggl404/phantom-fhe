@@ -248,6 +248,18 @@ namespace phantom {
         return destination;
     }
 
+    // True homomorphic bootstrap core (no decrypt/encrypt): currently implements modulus raising stage.
+    // It is intended as stage-1 of full CKKS bootstrapping pipeline.
+    void bootstrap_homomorphic_inplace(const PhantomContext &context, PhantomCiphertext &encrypted,
+                                       size_t target_chain_index = 1, double target_scale = 0.0);
+
+    inline auto bootstrap_homomorphic(const PhantomContext &context, const PhantomCiphertext &encrypted,
+                                      size_t target_chain_index = 1, double target_scale = 0.0) {
+        PhantomCiphertext destination = encrypted;
+        bootstrap_homomorphic_inplace(context, destination, target_chain_index, target_scale);
+        return destination;
+    }
+
     void hoisting_inplace(const PhantomContext &context, PhantomCiphertext &ct, const PhantomGaloisKey &glk,
                           const std::vector<int> &steps);
 

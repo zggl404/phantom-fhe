@@ -18,6 +18,7 @@ detailed instructions and explanations.
 
 * Native GPU acceleration (for NVIDIA GPUs)
 * Support word-wise schemes including BGV, BFV, and CKKS
+* Support key-assisted CKKS bootstrap refresh API and stage-1 true homomorphic bootstrap core (modulus raising)
 * Easy to integrate with applications (PPML, etc.)
 
 ## License
