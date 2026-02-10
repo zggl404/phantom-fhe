@@ -209,6 +209,11 @@ class Bootstrapper {
 	void slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 	void slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 
+    void slim_bootstrap_relu_inplace(PhantomCiphertext &cipher);
+	void slim_bootstrap_relu(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_bootstrap_relu_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+	void slim_bootstrap_relu_full_real_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
+
 	void slim_coefftoslot_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 	void slim_slottocoeff_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 	void slim_slottocoeff(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);

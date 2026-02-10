@@ -372,6 +372,10 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
   inverse_sin_polynomial_v1.homomorphic_poly_evaluation(ckks, rtn, sin_tmp2);
   // inverse_sin_polynomial_v1.homomorphic_poly_evaluation_naive(context, encoder, encryptor, evaluator, relin_keys, sin_rtn, sin_tmp2, decryptor);
   ckks->evaluator.mod_switch_to_next_inplace(rtn);
+
+  ckks->evaluator.multiply_const_inplace(rtn, 2);
+  ckks->evaluator.rescale_to_next_inplace(rtn);
+  
 }
 void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphertext &cipher)
 {

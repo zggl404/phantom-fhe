@@ -4238,7 +4238,7 @@ void Bootstrapper::slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, Phantom
   cout << "Modular reduction..." << endl;
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
 
-  mod_reducer->modular_reduction_relu(real_part, real_part);
+  mod_reducer->modular_reduction(real_part, real_part);
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
 
   cout << "scale = " << setprecision(20) << real_part.scale() << endl;
@@ -4290,6 +4290,139 @@ void Bootstrapper::slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, Phan
   cout << "Modular reduction..." << endl;
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
 
+  mod_reducer->modular_reduction(real_part, real_part);
+  cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
+  cout << "scale = " << setprecision(10) << real_part.scale() << endl;
+
+  rtncipher = real_part;
+  rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
+  
+  cout << "scale = " << setprecision(10) << rtncipher.scale() << endl;
+}
+
+
+void Bootstrapper::slim_bootstrap_relu_inplace(PhantomCiphertext &cipher)
+{
+  PhantomCiphertext rtncipher;
+  slim_bootstrap_relu(rtncipher, cipher);
+  cipher = rtncipher;
+}
+void Bootstrapper::slim_bootstrap_relu(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher)
+{
+  // cipher.scale() = pow(2.0, round( log2(cipher.scale()) ) ); // To niu chao: ???
+  initial_scale = cipher.scale();
+  if (logn == logNh)
+  {
+    slim_bootstrap_relu_full_real_3(rtncipher, cipher);
+  }
+  else
+  {
+    // cout << "sparse"<<endl;
+    slim_bootstrap_relu_sparse_3(rtncipher, cipher);
+  }
+}
+
+void Bootstrapper::slim_bootstrap_relu_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher)
+{
+
+  auto curr_level = ckks->context->get_context_data(cipher.params_id()).chain_depth();
+  cout << "[DEBUG] slim bootstrap sparse" << endl;
+  cout << "[DEBUG] curr_level = " << curr_level << endl;
+  if (curr_level < 3)
+    throw("curr_level is less than 3!");
+  while (curr_level > 3)
+  {
+    ckks->evaluator.mod_switch_to_next_inplace(cipher);
+    curr_level -= 1;
+  };
+
+  cout << "Slots2Coeff..." << endl;
+  PhantomCiphertext rtn;
+  slim_slottocoeff(rtn, cipher);
+
+  cout << "Modulus Raising..." << endl;
+  modraise_inplace(rtn);
+  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  rtn.scale() = ((double)modulus[0].value());
+  cout << "level = " << rtn.coeff_modulus_size() - 1 << endl;
+  cout << "scale = " << setprecision(10) << rtn.scale() << endl;
+
+  cout << "Subsum..." << endl;
+  PhantomCiphertext rot;
+  for (long i = logn; i < logNh; ++i)
+  {
+    ckks->evaluator.rotate_vector(rtn, (1 << i), *(ckks->galois_keys), rot);
+    ckks->evaluator.add_inplace(rtn, rot);
+  }
+
+  PhantomCiphertext real_part;
+  cout << "Coeffs2Slots..." << endl;
+  slim_coefftoslot(real_part, rtn);
+  cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
+  cout << "scale = " << setprecision(10) << real_part.scale() << endl;
+
+  cout << "Get real part..." << endl;
+  cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
+  PhantomCiphertext conj;
+  ckks->evaluator.complex_conjugate(real_part, *(ckks->galois_keys), conj);
+  
+  ckks->evaluator.add_inplace(real_part, conj);
+
+  cout << "Modular reduction..." << endl;
+  cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
+
+  mod_reducer->modular_reduction_relu(real_part, real_part);
+  cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
+
+  cout << "scale = " << setprecision(20) << real_part.scale() << endl;
+
+  rtncipher = real_part;
+  rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
+  cout << "scale = " << setprecision(20) << rtncipher.scale() << endl;
+}
+
+void Bootstrapper::slim_bootstrap_relu_full_real_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher)
+{
+  initial_scale = cipher.scale();
+
+  auto curr_level = ckks->context->get_context_data(cipher.params_id()).chain_depth();
+  if (curr_level < 3)
+    throw("curr_level is less than 3!");
+  while (curr_level > 3)
+  {
+    ckks->evaluator.mod_switch_to_next_inplace(cipher);
+    curr_level -= 1;
+  };
+
+  // cipher.scale() = pow(2.0, 45);
+
+  cout << "level = " << cipher.coeff_modulus_size() - 1 << endl;
+  cout << "scale = " << cipher.scale() << endl;
+  cout << "Slots2Coeff..." << endl;
+  // auto  start  =  std::chrono::high_resolution_clock::now();
+  PhantomCiphertext rtn;
+  slim_slottocoeff_full(rtn, cipher);
+
+  cout << "level = " << rtn.coeff_modulus_size() - 1 << endl;
+  cout << "scale = " << rtn.scale() << endl;
+
+  // start  =  std::chrono::high_resolution_clock::now();
+  cout << "Modulus Raising..." << endl;
+  modraise_inplace(rtn);
+  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  rtn.scale() = ((double)modulus[0].value());
+  cout << "level = " << rtn.coeff_modulus_size() - 1 << endl;
+  cout << "scale = " << rtn.scale() << endl;
+
+  PhantomCiphertext real_part;
+  cout << "Coeffs2Slots..." << endl;
+  slim_coefftoslot_full(real_part, rtn);
+  cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
+  cout << "scale = " << setprecision(10) << real_part.scale() << endl;
+
+  cout << "Modular reduction..." << endl;
+  cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
+
   mod_reducer->modular_reduction_relu(real_part, real_part);
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
   cout << "scale = " << setprecision(10) << real_part.scale() << endl;
@@ -4299,6 +4432,8 @@ void Bootstrapper::slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, Phan
   
   cout << "scale = " << setprecision(10) << rtncipher.scale() << endl;
 }
+
+
 
 void Bootstrapper::slim_coefftoslot_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher)
 {
