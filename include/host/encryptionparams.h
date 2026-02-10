@@ -97,13 +97,20 @@ namespace phantom {
             special_modulus_size_ = special_modulus_size;
         }
 
-        // Compatibility shim for forked examples.
         inline void set_secret_key_hamming_weight(std::size_t secret_key_hamming_weight) {
+            if (scheme_ == scheme_type::none && secret_key_hamming_weight) {
+                throw std::logic_error("secret key hamming weight is not supported for this scheme");
+            }
             secret_key_hamming_weight_ = secret_key_hamming_weight;
         }
 
-        // Compatibility shim for forked examples.
         inline void set_sparse_slots(std::size_t sparse_slots) {
+            if (scheme_ == scheme_type::none && sparse_slots) {
+                throw std::logic_error("sparse slots is not supported for this scheme");
+            }
+            if ((sparse_slots & (sparse_slots - 1)) != 0) {
+                throw std::logic_error("sparse slots must be zero or power-of-two");
+            }
             sparse_slots_ = sparse_slots;
         }
 

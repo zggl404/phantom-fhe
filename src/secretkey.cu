@@ -3,6 +3,10 @@
 #include "scalingvariant.cuh"
 #include "secretkey.h"
 
+#include <algorithm>
+#include <random>
+#include <vector>
+
 using namespace std;
 using namespace phantom;
 using namespace phantom::util;
@@ -340,7 +344,47 @@ void PhantomSecretKey::generate_one_kswitch_key(const PhantomContext &context, u
             alpha, bigP_mod_q, bigP_mod_q_shoup);
 }
 
+namespace {
+
+std::vector<size_t> choose_zero_indices_for_secret_key(const uint64_t *coeffs, size_t coeff_count,
+                                                       size_t hamming_weight) {
+    std::vector<size_t> non_zero_indices;
+    non_zero_indices.reserve(coeff_count);
+
+    for (size_t index = 0; index < coeff_count; index++) {
+        if (coeffs[index] != 0) {
+            non_zero_indices.push_back(index);
+        }
+    }
+
+    const size_t current_hamming_weight = non_zero_indices.size();
+    if (current_hamming_weight == hamming_weight) {
+        return {};
+    }
+
+    if (hamming_weight > current_hamming_weight) {
+        throw std::invalid_argument("secret_key_hamming_weight exceeds sampled ternary key weight");
+    }
+
+    std::random_device random_device;
+    std::mt19937 random_generator(random_device());
+    std::shuffle(non_zero_indices.begin(), non_zero_indices.end(), random_generator);
+
+    const size_t zero_count = current_hamming_weight - hamming_weight;
+    non_zero_indices.resize(zero_count);
+    return non_zero_indices;
+}
+
+void apply_zero_indices_to_secret_key(uint64_t *coeffs, const std::vector<size_t> &zero_indices) {
+    for (size_t index : zero_indices) {
+        coeffs[index] = 0;
+    }
+}
+
+} // namespace
+
 void PhantomSecretKey::gen_secretkey(const PhantomContext &context) {
+
     if (gen_flag_) {
         throw std::logic_error("cannot generate secret key twice");
     }
@@ -370,6 +414,31 @@ void PhantomSecretKey::gen_secretkey(const PhantomContext &context) {
     sample_ternary_poly<<<gridDimGlb, blockDimGlb, 0, s>>>(
             secret_key_array_.get(), prng_seed_error.get(), base_rns,
             poly_degree, coeff_mod_size);
+
+    const size_t secret_key_hamming_weight = context.key_context_data().parms().secret_key_hamming_weight();
+    if (secret_key_hamming_weight) {
+        if (secret_key_hamming_weight > poly_degree) {
+            throw std::invalid_argument("secret_key_hamming_weight cannot exceed poly_modulus_degree");
+        }
+
+        cudaStreamSynchronize(s);
+
+        std::vector<uint64_t> host_secret_key(poly_degree * coeff_mod_size);
+        cudaMemcpy(host_secret_key.data(), secret_key_array_.get(),
+                   host_secret_key.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+
+        auto zero_indices = choose_zero_indices_for_secret_key(
+                host_secret_key.data(), poly_degree, secret_key_hamming_weight);
+
+        if (!zero_indices.empty()) {
+            for (size_t modulus_index = 0; modulus_index < coeff_mod_size; modulus_index++) {
+                apply_zero_indices_to_secret_key(host_secret_key.data() + modulus_index * poly_degree, zero_indices);
+            }
+
+            cudaMemcpy(secret_key_array_.get(), host_secret_key.data(),
+                       host_secret_key.size() * sizeof(uint64_t), cudaMemcpyHostToDevice);
+        }
+    }
 
     // Compute the NTT form of secret key and
     // save secret_key to the first coeff_mod_size * N elements of secret_key_array
