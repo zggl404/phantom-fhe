@@ -17,7 +17,7 @@ detailed instructions and explanations.
 ## Features
 
 * Native GPU acceleration (for NVIDIA GPUs)
-* Support word-wise schemes including BGV, BFV, and CKKS (without bootstrapping)
+* Support word-wise schemes including BGV, BFV, and CKKS
 * Easy to integrate with applications (PPML, etc.)
 
 ## License
@@ -76,6 +76,6 @@ If you are exploring BFV optimizations, please also cite the following paper:
 
 We are planning to support the following features in the future:
 
-* [ ] support bootstrapping for BFV/BGV/CKKS
+* [ ] support full GPU-native bootstrapping for BFV/BGV/CKKS
 * [x] support bit-wise schemes FHEW/TFHE (will not be open-sourced)
 * [ ] support scheme switching (will not be open-sourced)

@@ -59,3 +59,37 @@ ct_out = phantom.hoisting(context, ct_in, glk, hoisting_steps)
 {% endcode %}
 {% endtab %}
 {% endtabs %}
+
+## CKKS Bootstrap (Key-Assisted Refresh)
+
+PhantomFHE provides a practical CKKS bootstrap refresh API for workflows that need to restore level and scale.
+The current implementation is key-assisted and follows the refresh objective used by bootstrap pipelines:
+
+1. decrypt ciphertext to CKKS plaintext;
+2. decode slots;
+3. re-encode at target chain index and scale;
+4. re-encrypt to refreshed ciphertext.
+
+This API is useful for algorithm prototyping and integration testing before full GPU-native bootstrapping is enabled.
+
+{% tabs %}
+{% tab title="C++" %}
+{% code overflow="wrap" lineNumbers="true" %}
+```cpp
+auto ct_refreshed = phantom::bootstrap(context, ct_in, secret_key, encoder,
+                                      /*target_chain_index=*/1,
+                                      /*target_scale=*/pow(2.0, 40));
+```
+{% endcode %}
+{% endtab %}
+
+{% tab title="Python" %}
+{% code overflow="wrap" lineNumbers="true" %}
+```python
+ct_refreshed = phantom.bootstrap(context, ct_in, sk, encoder,
+                                target_chain_index=1,
+                                target_scale=2.0 ** 40)
+```
+{% endcode %}
+{% endtab %}
+{% endtabs %}

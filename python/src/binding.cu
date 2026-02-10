@@ -162,5 +162,8 @@ PYBIND11_MODULE(pyPhantom, m) {
 
     m.def("rotate", &phantom::rotate, py::arg(), py::arg(), py::arg(), py::arg());
 
+    m.def("bootstrap", &phantom::bootstrap, py::arg(), py::arg(), py::arg(), py::arg(),
+          py::arg("target_chain_index") = 1, py::arg("target_scale") = 0.0);
+
     m.def("hoisting", &phantom::hoisting, py::arg(), py::arg(), py::arg(), py::arg());
 }

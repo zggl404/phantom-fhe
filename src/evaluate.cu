@@ -1668,6 +1668,57 @@ Returns (f, e1, e2) such that
         rotate_internal(context, encrypted, step, galois_key);
     }
 
+    void bootstrap_inplace(const PhantomContext &context, PhantomCiphertext &encrypted,
+                           PhantomSecretKey &secret_key, PhantomCKKSEncoder &encoder,
+                           size_t target_chain_index, double target_scale) {
+        auto &context_data = context.get_context_data(encrypted.chain_index());
+        auto &parms = context_data.parms();
+
+        if (parms.scheme() != scheme_type::ckks) {
+            throw invalid_argument("bootstrap currently supports CKKS only");
+        }
+
+        if (!encrypted.is_ntt_form()) {
+            throw invalid_argument("CKKS encrypted must be in NTT form");
+        }
+
+        auto first_index = context.get_first_index();
+        auto total_parm_size = context.total_parm_size();
+        if (target_chain_index < first_index || target_chain_index >= total_parm_size) {
+            throw invalid_argument("target_chain_index out of valid data-level range");
+        }
+
+        auto &target_context_data = context.get_context_data(target_chain_index);
+        auto &target_coeff_modulus = target_context_data.parms().coeff_modulus();
+        if (target_coeff_modulus.empty()) {
+            throw invalid_argument("target coeff_modulus is empty");
+        }
+
+        if (!(target_scale > 0.0)) {
+            auto min_bit_count = static_cast<int>(target_coeff_modulus[0].bit_count());
+            for (const auto &mod: target_coeff_modulus) {
+                min_bit_count = std::min(min_bit_count, static_cast<int>(mod.bit_count()));
+            }
+            if (min_bit_count <= 2) {
+                throw invalid_argument("target coeff_modulus bit count too small");
+            }
+            target_scale = std::pow(2.0, static_cast<double>(min_bit_count - 2));
+        }
+
+        PhantomPlaintext decrypted_plain;
+        secret_key.decrypt(context, encrypted, decrypted_plain);
+
+        std::vector<cuDoubleComplex> slots;
+        encoder.decode(context, decrypted_plain, slots);
+
+        PhantomPlaintext refreshed_plain;
+        encoder.encode(context, slots, target_scale, refreshed_plain, target_chain_index);
+
+        PhantomCiphertext refreshed_cipher;
+        secret_key.encrypt_symmetric(context, refreshed_plain, refreshed_cipher);
+        encrypted = std::move(refreshed_cipher);
+    }
+
     void hoisting_inplace(const PhantomContext &context, PhantomCiphertext &ct, const PhantomGaloisKey &glk,
                           const std::vector<int> &steps) {
         const auto &s = cudaStreamPerThread;

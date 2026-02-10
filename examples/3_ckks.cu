@@ -609,6 +609,52 @@ void example_ckks_rotation(PhantomContext &context, const double &scale) {
     x_msg.clear();
 }
 
+void example_ckks_bootstrap_refresh(PhantomContext &context, const double &scale) {
+    std::cout << "Example: CKKS Bootstrap (key-assisted refresh)" << std::endl;
+
+    PhantomSecretKey secret_key(context);
+    PhantomPublicKey public_key = secret_key.gen_publickey(context);
+    PhantomCKKSEncoder encoder(context);
+
+    size_t slot_count = encoder.slot_count();
+    size_t msg_size = std::min<size_t>(slot_count, 16);
+
+    std::vector<double> input(slot_count, 0.0);
+    for (size_t i = 0; i < msg_size; i++) {
+        input[i] = static_cast<double>(i + 1) / 10.0;
+    }
+
+    PhantomPlaintext pt;
+    encoder.encode(context, input, scale, pt, 1);
+
+    PhantomCiphertext ct;
+    public_key.encrypt_asymmetric(context, pt, ct);
+
+    while (ct.chain_index() + 1 < context.total_parm_size()) {
+        rescale_to_next_inplace(context, ct);
+    }
+
+    std::cout << "Before bootstrap: chain_index=" << ct.chain_index()
+              << ", log2(scale)=" << log2(ct.scale()) << std::endl;
+
+    bootstrap_inplace(context, ct, secret_key, encoder, 1, scale);
+
+    std::cout << "After bootstrap: chain_index=" << ct.chain_index()
+              << ", log2(scale)=" << log2(ct.scale()) << std::endl;
+
+    PhantomPlaintext pt_dec;
+    secret_key.decrypt(context, ct, pt_dec);
+    auto result = encoder.decode<double>(context, pt_dec);
+
+    bool correctness = true;
+    for (size_t i = 0; i < msg_size; i++) {
+        correctness &= compare_double(result[i], input[i]);
+    }
+    if (!correctness) {
+        throw std::logic_error("CKKS bootstrap refresh error");
+    }
+}
+
 void example_ckks_small_param() {
     EncryptionParameters parms(scheme_type::ckks);
 
@@ -758,6 +804,7 @@ void examples_ckks() {
         example_ckks_mul_plain(context, scale);
         example_ckks_mul(context, scale);
         example_ckks_rotation(context, scale);
+        example_ckks_bootstrap_refresh(context, scale);
     }
 
     example_ckks_small_param();

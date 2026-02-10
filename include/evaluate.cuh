@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "ciphertext.h"
+#include "ckks.h"
 #include "context.cuh"
 #include "ntt.cuh"
 #include "plaintext.h"
@@ -233,6 +234,19 @@ namespace phantom {
     }
 
 /*************************************************** Advanced APIs ****************************************************/
+
+    // Key-assisted CKKS bootstrap (refresh): decrypt -> decode -> re-encode -> encrypt.
+    void bootstrap_inplace(const PhantomContext &context, PhantomCiphertext &encrypted,
+                           PhantomSecretKey &secret_key, PhantomCKKSEncoder &encoder,
+                           size_t target_chain_index = 1, double target_scale = 0.0);
+
+    inline auto bootstrap(const PhantomContext &context, const PhantomCiphertext &encrypted,
+                          PhantomSecretKey &secret_key, PhantomCKKSEncoder &encoder,
+                          size_t target_chain_index = 1, double target_scale = 0.0) {
+        PhantomCiphertext destination = encrypted;
+        bootstrap_inplace(context, destination, secret_key, encoder, target_chain_index, target_scale);
+        return destination;
+    }
 
     void hoisting_inplace(const PhantomContext &context, PhantomCiphertext &ct, const PhantomGaloisKey &glk,
                           const std::vector<int> &steps);

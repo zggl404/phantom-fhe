@@ -33,6 +33,9 @@ ct = pk.encrypt_asymmetric(context, pt)
 ct = phantom.multiply_and_relin(context, ct, ct, rlk)
 ct = phantom.rescale_to_next(context, ct)
 
+# key-assisted bootstrap (refresh to chain index 1)
+ct = phantom.bootstrap(context, ct, sk, encoder, target_chain_index=1)
+
 ct2 = phantom.hoisting(context, ct, glk, [1, 2, 3, 4, 5, 6, 7])
 ct = phantom.add(context, ct, ct2)
 
