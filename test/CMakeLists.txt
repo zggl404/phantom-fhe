@@ -8,3 +8,5 @@ find_package(CUDAToolkit REQUIRED)
 add_executable(fft_test fft_test.cu)
 target_link_libraries(fft_test PUBLIC Phantom CUDA::cufft)
 target_include_directories(fft_test PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+add_executable(numth_is_prime_perf_test numth_is_prime_perf_test.cpp)

@@ -997,7 +997,8 @@ Returns (f, e1, e2) such that
 
         // key switch
         auto cx = make_cuda_auto_ptr<uint64_t>(2 * size_QlP_n, stream);
-        auto reduction_threshold = (1 << (bits_per_uint64 - rns_tool.qMSB() - 1)) - 1;
+        auto reduction_shift = bits_per_uint64 - rns_tool.qMSB() - 1;
+        auto reduction_threshold = (uint64_t(1) << reduction_shift) - 1;
         key_switch_inner_prod_c2_and_evk<<<size_QlP_n / blockDimGlb.x, blockDimGlb, 0, stream>>>(
                 cx.get(), t_mod_up.get(), relin_keys.public_keys_ptr(), modulus_QP, n, size_QP, size_QP_n, size_QlP,
                 size_QlP_n, size_Q, size_Ql, beta, reduction_threshold);
@@ -1783,7 +1784,7 @@ Returns (f, e1, e2) such that
         auto acc_cx = make_cuda_auto_ptr<uint64_t>(2 * size_QlP_n, s);
 
         auto reduction_threshold =
-                (1 << (bits_per_uint64 - static_cast<uint64_t>(log2(key_modulus.front().value())) - 1)) - 1;
+                (uint64_t(1) << static_cast<uint64_t>(__builtin_clzll(key_modulus.front().value()))) - 1;
         key_switch_inner_prod_c2_and_evk<<<size_QlP_n / blockDimGlb.x, blockDimGlb, 0, s>>>(
                 acc_cx.get(), temp_modup_c1.get(), glk.get_relin_keys(first_elt_index).public_keys_ptr(), modulus_QP, n,
                 size_QP, size_QP_n, size_QlP, size_QlP_n, size_Q, size_Ql, beta, reduction_threshold);
@@ -1791,6 +1792,7 @@ Returns (f, e1, e2) such that
         // ------------------------------------------ loop accumulate ------------------------------------------------------
 
         auto temp_c0 = make_cuda_auto_ptr<uint64_t>(size_Ql_n, s);
+        auto temp_cx = make_cuda_auto_ptr<uint64_t>(2 * size_QlP_n, s);
 
         for (size_t i = 1; i < elts.size(); i++) {
             // automorphism c0
@@ -1822,7 +1824,6 @@ Returns (f, e1, e2) such that
             }
 
             // inner product c1
-            auto temp_cx = make_cuda_auto_ptr<uint64_t>(2 * size_QlP_n, s);
             key_switch_inner_prod_c2_and_evk<<<size_QlP_n / blockDimGlb.x, blockDimGlb, 0, s>>>(
                     temp_cx.get(), temp_modup_c1.get(), glk.get_relin_keys(elt_index).public_keys_ptr(), modulus_QP, n,
                     size_QP, size_QP_n, size_QlP, size_QlP_n, size_Q, size_Ql, beta, reduction_threshold);

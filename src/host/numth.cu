@@ -1,4 +1,6 @@
 #include <random>
+#include <array>
+#include <algorithm>
 
 #include "host/numth.h"
 #include "host/uintarithsmallmod.h"
@@ -181,13 +183,22 @@ namespace phantom {
                 return false;
             }
 
-            // 1) Pick a = 2, check a^(value - 1).
-            // 2) Pick a randomly from [3, value - 1], check a^(value - 1).
-            // 3) Repeat 2) for another num_rounds - 2 times.
-            random_device rand;
-            uniform_int_distribution<unsigned long long> dist(3, value - 1);
-            for (size_t i = 0; i < num_rounds; i++) {
-                uint64_t a = i ? dist(rand) : 2;
+            // Deterministic Miller-Rabin witnesses for 64-bit integers.
+            // Using fixed bases removes RNG overhead in hot paths such as get_primes().
+            static constexpr std::array<uint64_t, 7> kDeterministicWitnesses = {
+                    2ULL, 325ULL, 9375ULL, 28178ULL, 450775ULL, 9780504ULL, 1795265022ULL
+            };
+
+            size_t rounds = std::min(num_rounds, kDeterministicWitnesses.size());
+            if (rounds == 0) {
+                return true;
+            }
+
+            for (size_t i = 0; i < rounds; i++) {
+                uint64_t a = kDeterministicWitnesses[i] % value;
+                if (a <= 1) {
+                    continue;
+                }
                 uint64_t x = exponentiate_uint_mod(a, d, modulus);
                 if (x == 1 || x == value - 1) {
                     continue;

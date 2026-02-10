@@ -153,8 +153,8 @@ namespace phantom {
 
         // key switch
         auto cx = make_cuda_auto_ptr<uint64_t>(2 * size_QlP_n, s);
-        auto reduction_threshold =
-                (1 << (bits_per_uint64 - static_cast<uint64_t>(log2(key_modulus.front().value())) - 1)) - 1;
+        auto reduction_shift = static_cast<uint64_t>(__builtin_clzll(key_modulus.front().value()));
+        auto reduction_threshold = (uint64_t(1) << reduction_shift) - 1;
         key_switch_inner_prod(cx.get(), t_mod_up.get(), relin_keys.public_keys_ptr(), rns_tool, modulus_QP,
                               reduction_threshold, s);
 
