@@ -9,6 +9,16 @@ if (PHANTOM_USE_CUDA_PTX)
     add_compile_definitions(PHANTOM_USE_CUDA_PTX)
 endif ()
 
+# [option] PHANTOM_ENABLE_BOOTSTRAP (default: OFF)
+option(PHANTOM_ENABLE_BOOTSTRAP "Enable bootstrapping module (experimental)" OFF)
+message(STATUS "Enable bootstrap module: ${PHANTOM_ENABLE_BOOTSTRAP}")
+
+if (PHANTOM_ENABLE_BOOTSTRAP)
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+    find_package(NTL REQUIRED)
+    find_package(GMP REQUIRED)
+endif ()
+
 if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES native)
 endif ()

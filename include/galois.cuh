@@ -147,8 +147,12 @@ namespace phantom::util {
         [[nodiscard]] inline std::vector<std::uint32_t> get_elts_from_steps(const std::vector<int> &steps) const {
             std::vector<std::uint32_t> elts;
             for (auto step: steps)
-                elts.push_back(get_elt_from_step(step, coeff_count_));
+                elts.push_back(phantom::util::get_elt_from_step(step, coeff_count_));
             return elts;
+        }
+
+        [[nodiscard]] inline std::uint32_t get_elt_from_step(int step) const {
+            return phantom::util::get_elt_from_step(step, coeff_count_);
         }
 
         void apply_galois(uint64_t *operand, const DNTTTable &rns_table, size_t coeff_mod_size, size_t galois_elt_idx,

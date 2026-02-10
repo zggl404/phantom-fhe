@@ -9,7 +9,24 @@ PhantomFHE actually handles the auto-select logic for CUDA architectures. But nv
 Phantom has some optional CMake options. If you want to explicitly disable some features, you can add something like `-DPHANTOM_ENABLE_EXAMPLE=OFF` during cmake configuration stage.
 
 * `PHANTOM_USE_CUDA_PTX`: Enable CUDA PTX optimizations (default: `ON`)
+* `PHANTOM_ENABLE_BOOTSTRAP`: Enable bootstrapping module and bootstrap-related examples (default: `OFF`, requires NTL/GMP)
 * `PHANTOM_ENABLE_EXAMPLE`: Enable examples (default: `ON`)
 * `PHANTOM_ENABLE_BENCH`: Enable benchmarks (default: `OFF`)
 * `PHANTOM_ENABLE_TEST`: Enable tests (default: `OFF`)
 * `PHANTOM_ENABLE_PYTHON_BINDING`: Enable Python bindings (default: `OFF`)
+
+## Common Build Recipes
+
+Minimal build:
+
+```sh
+cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=native
+cmake --build build -j
+```
+
+Build with bootstrapping + all examples:
+
+```sh
+cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=native -DPHANTOM_ENABLE_BOOTSTRAP=ON -DPHANTOM_ENABLE_EXAMPLE=ON
+cmake --build build -j
+```

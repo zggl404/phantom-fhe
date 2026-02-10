@@ -34,7 +34,7 @@ Nowadays there are a variety of applications based on homomorphic encryption to 
 ## Features
 
 * Native GPU acceleration (for NVIDIA GPUs)
-* Support word-wise schemes including BGV, BFV, and CKKS (without bootstrapping)
+* Support word-wise schemes including BGV, BFV, and CKKS (with optional experimental bootstrapping module)
 * SOTA performance in most operations
 * Easy to integrate with applications (PPML, etc.)
 
@@ -73,6 +73,13 @@ Minimal just-work commands are listed below:
 
 ```sh
 cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=native
+cmake --build build -j
+```
+
+If you also want bootstrapping and bootstrap-related examples, enable `PHANTOM_ENABLE_BOOTSTRAP`:
+
+```sh
+cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=native -DPHANTOM_ENABLE_BOOTSTRAP=ON -DPHANTOM_ENABLE_EXAMPLE=ON
 cmake --build build -j
 ```
 

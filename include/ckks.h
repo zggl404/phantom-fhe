@@ -1,5 +1,6 @@
 #pragma once
 
+#include <complex>
 #include <cuComplex.h>
 
 #include "context.cuh"
@@ -38,6 +39,19 @@ private:
         encode_internal(context, input, chain_index, scale, destination, stream);
     }
 
+    inline void encode_internal(const PhantomContext &context,
+                                const std::vector<std::complex<double>> &values,
+                                size_t chain_index, double scale,
+                                PhantomPlaintext &destination,
+                                const cudaStream_t &stream) {
+        size_t values_size = values.size();
+        std::vector<cuDoubleComplex> input(values_size);
+        for (size_t i = 0; i < values_size; i++) {
+            input[i] = make_cuDoubleComplex(values[i].real(), values[i].imag());
+        }
+        encode_internal(context, input, chain_index, scale, destination, stream);
+    }
+
     void decode_internal(const PhantomContext &context,
                          const PhantomPlaintext &plain,
                          std::vector<cuDoubleComplex> &destination,
@@ -52,6 +66,18 @@ private:
         destination.resize(slots_);
         for (size_t i = 0; i < slots_; i++)
             destination[i] = output[i].x;
+    }
+
+    inline void decode_internal(const PhantomContext &context,
+                                const PhantomPlaintext &plain,
+                                std::vector<std::complex<double>> &destination,
+                                const cudaStream_t &stream) {
+        std::vector<cuDoubleComplex> output;
+        decode_internal(context, plain, output, stream);
+        destination.resize(slots_);
+        for (size_t i = 0; i < slots_; i++) {
+            destination[i] = std::complex<double>(output[i].x, output[i].y);
+        }
     }
 
 public:
@@ -81,6 +107,17 @@ public:
         encode_internal(context, values, chain_index, scale, destination, s);
     }
 
+    inline void encode(const PhantomContext &context,
+                       const std::vector<std::complex<double>> &values,
+                       double scale,
+                       PhantomPlaintext &destination,
+                       size_t chain_index = 1) {
+        const auto &s = cudaStreamPerThread;
+        destination.chain_index_ = 0;
+        destination.resize(context.coeff_mod_size_, context.poly_degree_, s);
+        encode_internal(context, values, chain_index, scale, destination, s);
+    }
+
     template<class T>
     [[nodiscard]] inline auto encode(const PhantomContext &context, const std::vector<T> &values,
                                      double scale,
@@ -98,6 +135,12 @@ public:
         decode_internal(context, plain, destination, cudaStreamPerThread);
     }
 
+    inline void decode(const PhantomContext &context,
+                       const PhantomPlaintext &plain,
+                       std::vector<std::complex<double>> &destination) {
+        decode_internal(context, plain, destination, cudaStreamPerThread);
+    }
+
     template<class T>
     [[nodiscard]] inline auto decode(const PhantomContext &context, const PhantomPlaintext &plain) {
         std::vector<T> destination;
@@ -107,6 +150,29 @@ public:
 
     [[nodiscard]] inline std::size_t slot_count() const noexcept {
         return slots_;
+    }
+
+    // Compatibility no-op for bootstrapping code paths
+    inline void reset_sparse_slots() {}
+
+    // Compatibility shim: encode real coefficients to plaintext
+    inline void encode_coeffs(const PhantomContext &context,
+                              const std::vector<double> &values,
+                              double scale,
+                              PhantomPlaintext &destination,
+                              size_t chain_index = 1) {
+        std::vector<cuDoubleComplex> packed;
+        packed.reserve(values.size());
+        for (double value : values) {
+            packed.push_back(make_cuDoubleComplex(value, 0.0));
+        }
+        encode(context, packed, scale, destination, chain_index);
+    }
+
+    inline void decode_coeffs(const PhantomContext &context,
+                              const PhantomPlaintext &plain,
+                              std::vector<double> &destination) {
+        decode(context, plain, destination);
     }
 
     auto &gpu_ckks_msg_vec() {

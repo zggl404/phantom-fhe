@@ -71,6 +71,12 @@ public:
         coeff_modulus_size_ = coeff_modulus_size;
     }
 
+    // Compatibility overload used by bootstrapping code paths
+    void resize(const PhantomContext &context, size_t chain_index, const cudaStream_t &stream) {
+        size_t size = size_ == 0 ? 2 : size_;
+        resize(context, chain_index, size, stream);
+    }
+
     void resize(size_t size, size_t coeff_modulus_size, size_t poly_modulus_degree, const cudaStream_t &stream) {
         size_t old_size = size_ * coeff_modulus_size_ * poly_modulus_degree_;
         size_t new_size = size * coeff_modulus_size * poly_modulus_degree;
@@ -142,6 +148,15 @@ public:
         return chain_index_;
     }
 
+    [[nodiscard]] auto &chain_index() noexcept {
+        return chain_index_;
+    }
+
+    // Compatibility alias used by bootstrapping code paths
+    [[nodiscard]] auto params_id() const noexcept {
+        return chain_index_;
+    }
+
     [[nodiscard]] auto &poly_modulus_degree() const noexcept {
         return poly_modulus_degree_;
     }
@@ -151,6 +166,10 @@ public:
     }
 
     [[nodiscard]] auto &scale() const noexcept {
+        return scale_;
+    }
+
+    [[nodiscard]] auto &scale() noexcept {
         return scale_;
     }
 

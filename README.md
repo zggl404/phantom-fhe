@@ -17,7 +17,7 @@ detailed instructions and explanations.
 ## Features
 
 * Native GPU acceleration (for NVIDIA GPUs)
-* Support word-wise schemes including BGV, BFV, and CKKS (without bootstrapping)
+* Support word-wise schemes including BGV, BFV, and CKKS (with optional experimental bootstrapping module)
 * Easy to integrate with applications (PPML, etc.)
 
 ## License
