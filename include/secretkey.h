@@ -301,11 +301,8 @@ public:
 
     [[nodiscard]] PhantomGaloisKey create_galois_keys(const PhantomContext& context) const;
 
-    [[nodiscard]] inline PhantomGaloisKey create_galois_keys_from_steps(
-            PhantomContext &context, const std::vector<int> &steps) const {
-        auto elts = context.key_galois_tool_->get_elts_from_steps(steps);
-        return create_galois_keys_from_elts(context, elts);
-    }
+    [[nodiscard]] PhantomGaloisKey create_galois_keys_from_steps(
+            PhantomContext &context, const std::vector<int> &steps) const;
 
     [[nodiscard]] PhantomGaloisKey create_galois_keys_from_elts(
             PhantomContext &context, const std::vector<uint32_t> &elts) const;

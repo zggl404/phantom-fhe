@@ -126,7 +126,7 @@ namespace phantom {
         [[nodiscard]] std::size_t chain_index() const noexcept { return chain_index_; }
 
         // Compatibility alias used by bootstrapping code paths
-        [[nodiscard]] std::size_t chain_depth() const noexcept { return chain_index_; }
+        [[nodiscard]] std::size_t chain_depth() const noexcept { return total_coeff_modulus_.size() - 1; }
 
         void set_chain_index(const std::size_t chain_index) noexcept { chain_index_ = chain_index; }
     };

@@ -132,7 +132,7 @@ int main()
   {
     ckks_evaluator.evaluator.mod_switch_to_next_inplace(cipher);
   }
-
+  
   // Decrypt input cipher to obtain the original input
   ckks_evaluator.decryptor.decrypt(cipher, plain);
   ckks_evaluator.encoder.decode(plain, before);
