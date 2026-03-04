@@ -4313,11 +4313,12 @@ void Bootstrapper::slim_bootstrap_relu(PhantomCiphertext &rtncipher, PhantomCiph
   initial_scale = cipher.scale();
   if (logn == logNh)
   {
+    cout << "slim_bootstrap_relu_full_real_3"<<endl;
     slim_bootstrap_relu_full_real_3(rtncipher, cipher);
   }
   else
   {
-    // cout << "sparse"<<endl;
+    cout << "slim_bootstrap_relu_sparse_3"<<endl;
     slim_bootstrap_relu_sparse_3(rtncipher, cipher);
   }
 }

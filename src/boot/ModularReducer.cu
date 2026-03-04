@@ -98,11 +98,11 @@ void ModularReducer::generate_sin_cos_polynomial()
       RR(-107962886396.68134)};
   sin_polynomial.set_polynomial(deg, coeffs, "power");
   sin_polynomial.generate_poly_heap();
-  sin_polynomial.showcoeff();
+  //sin_polynomial.showcoeff();
 
   cos_polynomial.set_polynomial(deg, coeffs, "power");
   cos_polynomial.generate_poly_heap();
-  cos_polynomial.showcoeff();
+  //cos_polynomial.showcoeff();
 }
 
 void ModularReducer::generate_inverse_sine_polynomial()
@@ -152,7 +152,7 @@ void ModularReducer::generate_inverse_sine_polynomial()
         RR(NTL::INIT_VAL_TYPE{}, "-4.2005464365314365056914532097070591744796635056007673884285548727683343842567724e-66"),
         RR(NTL::INIT_VAL_TYPE{}, "13355.853558204680018492786448903280528249651256497222226676393541186558489225246")};
     inverse_sin_polynomial_v1.set_polynomial(taylor_coeffs.size() - 1, taylor_coeffs.data(), "power");
-    inverse_sin_polynomial_v1.showcoeff();
+    //inverse_sin_polynomial_v1.showcoeff();
   }
   inverse_sin_polynomial_v1.generate_poly_heap();
   double inv_of_scale_for_eval = 1.0 / scale_for_eval;
@@ -387,7 +387,7 @@ void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphe
   double inv_of_scale_for_eval = 1.0 / scale_for_eval;
 
   sin_polynomial.homomorphic_poly_evaluation(ckks, cos_tmp2, cos_tmp1);
-  // cout << "after sin poly, #q = " << cos_tmp2.coeff_modulus_size() << endl;
+  cout << "after sin poly, #q = " << cos_tmp2.coeff_modulus_size() << endl;
   {
     for (int i = 0; i < num_double_formula + 1; i++)
     {
@@ -397,7 +397,7 @@ void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphe
         sin_tmp2 = cos_tmp2;
       }
     }
-    // cout << "after double angle for cos, #q = " << cos_tmp2.coeff_modulus_size() << endl;
+    cout << "after double angle for cos, #q = " << cos_tmp2.coeff_modulus_size() << endl;
   }
 
   eval_polynomial_integrate(*ckks, cos_rtn, cos_tmp2, 127, arcsin_decomp_coeff, arcsin_tree);

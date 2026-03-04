@@ -327,6 +327,7 @@ __global__ void multiply_temp_mod_and_add_rns_poly(const uint64_t *operand1,
                                                    const size_t n,
                                                    const size_t dnum,
                                                    const size_t alpha,
+                                                   const size_t size_Q,
                                                    const uint64_t *bigP_mod_q,
                                                    const uint64_t *bigP_mod_q_shoup) {
     for (size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -334,6 +335,9 @@ __global__ void multiply_temp_mod_and_add_rns_poly(const uint64_t *operand1,
          tid += blockDim.x * gridDim.x) {
         const size_t twr = tid / (alpha * n);
         const size_t mod_idx = tid / n;
+        if (mod_idx >= size_Q) {
+            continue;
+        }
         uint64_t qi = modulus[mod_idx].value();
         uint64_t factor = bigP_mod_q[mod_idx];
         uint64_t factor_shoup = bigP_mod_q_shoup[mod_idx];

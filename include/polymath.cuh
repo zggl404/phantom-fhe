@@ -173,6 +173,7 @@ __global__ void multiply_temp_mod_and_add_rns_poly(const uint64_t* operand1,
                                                    size_t n,
                                                    size_t dnum,
                                                    size_t alpha,
+                                                   size_t size_Q,
                                                    const uint64_t* factor,
                                                    const uint64_t* factor_shoup);
 

@@ -275,7 +275,7 @@ void PhantomSecretKey::generate_one_kswitch_key(const PhantomContext &context, u
     size_t size_P = key_parms.special_modulus_size();
     size_t size_QP = key_modulus.size();
     size_t size_Q = size_QP - size_P;
-    size_t dnum = size_Q / size_P;
+    size_t dnum = (size_Q + size_P - 1) / size_P;
     size_t alpha = size_P;
 
     auto bigP_mod_q = context.get_context_data(0).gpu_rns_tool().bigP_mod_q();
@@ -303,10 +303,11 @@ void PhantomSecretKey::generate_one_kswitch_key(const PhantomContext &context, u
                     stream);
 
     // Second compute P_{w,q}(s^2)+(-(as+e))
-    uint64_t gridDimGlb = poly_degree * dnum * alpha / blockDimGlb.x;
+    uint64_t total_threads = poly_degree * dnum * alpha;
+    uint64_t gridDimGlb = (total_threads + blockDimGlb.x - 1) / blockDimGlb.x;
     multiply_temp_mod_and_add_rns_poly<<<gridDimGlb, blockDimGlb, 0, stream>>>(
         new_key, relin_keys.public_keys_ptr_.get(), base_rns, relin_keys.public_keys_ptr_.get(), poly_degree, dnum,
-        alpha, bigP_mod_q, bigP_mod_q_shoup);
+        alpha, size_Q, bigP_mod_q, bigP_mod_q_shoup);
 }
 
 // Newly added

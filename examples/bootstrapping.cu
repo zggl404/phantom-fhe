@@ -32,12 +32,14 @@ int main()
   long loge = 10;
 
   long logn = 13; // 14 -> 13
-  size_t sparse_slot_count = 1 << (1 + logn);
+  size_t sparse_slot_count = 1 << logn;
 
   int logp = 47;
   int logq = 51;
   int log_special_prime = 51;
-
+  // Non-hybrid key switching uses one special prime.
+  // Set this to >1 to enable hybrid key switching.
+  int special_modulus_size = 4;
   int secret_key_hamming_weight = 192;
 
   int remaining_level = 3; // s2c
@@ -57,8 +59,10 @@ int main()
   {
     coeff_bit_vec.push_back(logq);
   }
-  coeff_bit_vec.push_back(log_special_prime);
-
+  for (int i = 0; i < special_modulus_size; i++)
+  {
+    coeff_bit_vec.push_back(log_special_prime);
+  }
   std::cout << "Setting Parameters..." << endl;
   phantom::EncryptionParameters parms(scheme_type::ckks);
   size_t poly_modulus_degree = (size_t)(1 << logN);
@@ -67,7 +71,7 @@ int main()
   parms.set_poly_modulus_degree(poly_modulus_degree);
   parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
   parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
-
+  parms.set_special_modulus_size(special_modulus_size);
   PhantomContext context(parms);
 
   PhantomSecretKey secret_key(context);
@@ -106,6 +110,7 @@ int main()
 
   std::cout << "Generating Linear Transformation Coefficients..." << endl;
   bootstrapper.generate_LT_coefficient_3();
+  std::cout << "Generating Linear Transformation Coefficients... Done" << endl;
 
   vector<double> input(1 << (logN - 1));
   vector<double> before(1 << (logN - 1));
@@ -140,11 +145,11 @@ int main()
   auto start = system_clock::now();
 
   PhantomCiphertext rtn;
-  bootstrapper.slim_bootstrap(rtn, cipher);
+  bootstrapper.slim_bootstrap_relu(rtn, cipher);
 
   duration<double> sec = system_clock::now() - start;
   std::cout << "Bootstrapping took: " << sec.count() << "s" << endl;
-  std::cout << "Return cipher level: " << rtn.coeff_modulus_size() << endl;
+  std::cout << "Return cipher level: " << rtn.chain_index()<<std::endl;
 
   ckks_evaluator.decryptor.decrypt(rtn, plain);
   ckks_evaluator.encoder.decode(plain, after);
@@ -169,9 +174,7 @@ int main()
       max_err = max(max_err, curr_err);
     }
     avg_err += curr_err;
-    // cout << "(" << i << ", " << after[i] - testing(input[i]) << "), ";
-    // cout << "(" << after[i] << ", " << testing(input[i]) << "), ";
-    cout << "(" << input[i] << ", " << after[i] << "), ";
+    //cout << "(" << input[i] << ", " << after[i] << "), ";
   }
   cout << endl;
   cout << "max error: " << max_err << " (2^" << log2(max_err) << ")" << endl;
