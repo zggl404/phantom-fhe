@@ -157,7 +157,10 @@ void ModularReducer::generate_inverse_sine_polynomial()
   inverse_sin_polynomial_v1.generate_poly_heap();
   double inv_of_scale_for_eval = 1.0 / scale_for_eval;
   inverse_sin_polynomial_v1.constmul(RR(inv_of_scale_for_eval));
-  inverse_sin_polynomial_v1.constmul(RR(0.5)); // for relu, comment this for id
+  if (use_relu_mode)
+  {
+    inverse_sin_polynomial_v1.constmul(RR(0.5));
+  }
   inverse_sin_polynomial_v1.generate_poly_heap_odd();
   inverse_sin_polynomial_v1_original.copy(inverse_sin_polynomial_v1);
 
@@ -303,7 +306,7 @@ void ModularReducer::generate_inverse_sine_polynomial()
   {
     RR temp = to_RR(kArcsinD127[j]);
 
-    // temp *= RR(0.5); // for abs
+    //temp *= RR(0.5); // for abs
     temp *= RR(0.25); // for relu
     temp *= RR(inv_of_scale_for_eval);
     arcsin_decomp_coeff.emplace_back(temp);
@@ -312,8 +315,8 @@ void ModularReducer::generate_inverse_sine_polynomial()
   // cout << endl;
   arcsin_decomp_coeff_original = arcsin_decomp_coeff;
 
-  // abs_lift = 0.125 * inv_of_scale_for_eval; // no 0.5 for abs
-  abs_lift = 0.125 * inv_of_scale_for_eval * 0.5; // one 0.5 for relu
+  //abs_lift = 0.125 * inv_of_scale_for_eval; // no 0.5 for abs
+  abs_lift = 0.125 * inv_of_scale_for_eval*0.5; // one 0.5 for relu
 }
 
 double scale_for_boost_relu_range = 2.0;
@@ -373,8 +376,7 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
   // inverse_sin_polynomial_v1.homomorphic_poly_evaluation_naive(context, encoder, encryptor, evaluator, relin_keys, sin_rtn, sin_tmp2, decryptor);
   ckks->evaluator.mod_switch_to_next_inplace(rtn);
 
-  ckks->evaluator.multiply_const_inplace(rtn, 2);
-  ckks->evaluator.rescale_to_next_inplace(rtn);
+  
   
 }
 void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphertext &cipher)

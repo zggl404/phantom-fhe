@@ -26,12 +26,13 @@ int main()
   long deg = 59;
   long scale_factor = 2;
   long inverse_deg = 127;
+  bool enable_relu = true;
 
   // The following parameters have been adjusted to satisfy the memory constraints of an H800 GPU
   long logN = 16; // 16 -> 15
   long loge = 10;
 
-  long logn = 13; // 14 -> 13
+  long logn = 15; // 14 -> 13
   size_t sparse_slot_count = 1 << logn;
 
   int logp = 47;
@@ -93,6 +94,7 @@ int main()
       scale_factor,
       inverse_deg,
       &ckks_evaluator);
+  bootstrapper.set_slim_relu(enable_relu);
 
   std::cout << "Generating Optimal Minimax Polynomials..." << endl;
   bootstrapper.prepare_mod_polynomial();
@@ -145,11 +147,11 @@ int main()
   auto start = system_clock::now();
 
   PhantomCiphertext rtn;
-  bootstrapper.slim_bootstrap_relu(rtn, cipher);
+  bootstrapper.slim_bootstrap(rtn, cipher);
 
   duration<double> sec = system_clock::now() - start;
   std::cout << "Bootstrapping took: " << sec.count() << "s" << endl;
-  std::cout << "Return cipher level: " << rtn.chain_index()<<std::endl;
+  std::cout << "Return cipher level: " << rtn.chain_index() << std::endl;
 
   ckks_evaluator.decryptor.decrypt(rtn, plain);
   ckks_evaluator.encoder.decode(plain, after);
@@ -163,18 +165,20 @@ int main()
   { return abs(x); };
   auto id = [](auto x)
   { return x; };
-  auto &testing(relu);
   for (size_t i = 0; i < sparse_slot_count; i++)
   {
-
-    auto curr_err = abs(testing(input[i]) - after[i]);
+    auto expected = enable_relu ? relu(input[i]) : id(input[i]);
+    auto curr_err = abs(expected - after[i]);
 
     if (abs((double)i - (double)sparse_slot_count / 2) / ((double)sparse_slot_count / 2) >= ignore_eps)
     {
       max_err = max(max_err, curr_err);
     }
     avg_err += curr_err;
-    //cout << "(" << input[i] << ", " << after[i] << "), ";
+    if (i < 100 || i > sparse_slot_count-100)
+    {
+      cout << "(" << input[i] << ", " << after[i] << "), ";
+    }
   }
   cout << endl;
   cout << "max error: " << max_err << " (2^" << log2(max_err) << ")" << endl;

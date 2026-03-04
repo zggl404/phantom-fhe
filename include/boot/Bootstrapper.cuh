@@ -29,6 +29,7 @@ class Bootstrapper {
   long scale_factor;
   long inverse_deg;
 
+  
   CKKSEvaluator *ckks = nullptr;
 
   vector<long> slot_vec;
@@ -55,6 +56,12 @@ class Bootstrapper {
 
   inline void set_final_scale(double _final_scale) {
     final_scale = _final_scale;
+  }
+  inline void set_slim_relu(bool enable_relu) {
+    slim_use_relu = enable_relu;
+    if (mod_reducer != nullptr) {
+      mod_reducer->set_relu_mode(enable_relu);
+    }
   }
 
   // Add rotation keys needed in bootstrapping (private function)
@@ -209,10 +216,6 @@ class Bootstrapper {
 	void slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 	void slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 
-    void slim_bootstrap_relu_inplace(PhantomCiphertext &cipher);
-	void slim_bootstrap_relu(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
-	void slim_bootstrap_relu_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
-	void slim_bootstrap_relu_full_real_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 
 	void slim_coefftoslot_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 	void slim_slottocoeff_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
@@ -220,5 +223,8 @@ class Bootstrapper {
 	void slim_coefftoslot(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher);
 
 	void btsDebugPrint(PhantomCiphertext rtncipher, string str);
-	void print_vector(std::vector<double> vec, std::size_t print_size, int prec);
+  void print_vector(std::vector<double> vec, std::size_t print_size, int prec);
+
+ private:
+  bool slim_use_relu = false;
 };

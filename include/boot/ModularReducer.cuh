@@ -44,13 +44,16 @@ class ModularReducer {
   void generate_inverse_sine_polynomial();
   void scaling_for_turn_back_q();
   void write_polynomials();
+  inline void set_relu_mode(bool enable_relu) { use_relu_mode = enable_relu; }
+  inline bool relu_mode() const { return use_relu_mode; }
   void modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphertext &cipher);
   void modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext &cipher);
 
-  vector<RR> arcsin_decomp_coeff;
+	vector<RR> arcsin_decomp_coeff;
 	vector<RR> arcsin_decomp_coeff_original;
 	minicomp::Tree arcsin_tree;
 	double abs_lift = 0.125;
+  bool use_relu_mode = false;
 };
 
 static double scale_for_eval = 4.0 * 0.9; // tuning
