@@ -4059,11 +4059,6 @@ void Bootstrapper::slim_sflinv_full_3(PhantomCiphertext &rtncipher, PhantomCiphe
   for (int i = 0; i < totlen2 + 1; i++)
     invfftcoeff3_scale[i].resize(n);
 
-  cout << "invfft mod_zero: " << log2(mod_zero) << endl;
-  cout << "invfft curr_mod: " << log2(curr_mod) << endl;
-  cout << "invfft final_scale: " << log2(final_scale) << endl;
-  cout << "invfft tmpct2.scale: " << log2(tmpct2.scale()) << endl;
-  cout << "invfft initial_scale: " << log2(initial_scale) << endl;
   for (int i = 0; i < totlen2 + 1; i++)
   {
     for (int j = 0; j < n; j++)
@@ -4071,7 +4066,6 @@ void Bootstrapper::slim_sflinv_full_3(PhantomCiphertext &rtncipher, PhantomCiphe
       invfftcoeff3_scale[i][j] = invfftcoeff3[slot_index][i][j] * curr_mod * mod_zero * final_scale / (tmpct2.scale() * tmpct2.scale() * initial_scale);
     }
   }
-  cout << "after scalar mult" << endl;
 
   bsgs_linear_transform(rtncipher, tmpct2, totlen3, basicstep3, logn, invfftcoeff3_scale);
   ckks->evaluator.rescale_to_next_inplace(rtncipher);
@@ -4106,6 +4100,7 @@ void Bootstrapper::slim_sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &c
     {
       e *= 2.0; // magic num, to check again
       e *= scale_for_eval;
+      e *= scale_for_boost_relu_range;
     }
   }
 
@@ -4194,8 +4189,6 @@ void Bootstrapper::slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, Phantom
 {
 
   auto curr_level = ckks->context->get_context_data(cipher.params_id()).chain_depth();
-  cout << "[DEBUG] slim bootstrap sparse" << endl;
-  cout << "[DEBUG] curr_level = " << curr_level << endl;
   if (curr_level < 3)
     throw("curr_level is less than 3!");
   while (curr_level > 3)
@@ -4249,11 +4242,12 @@ void Bootstrapper::slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, Phantom
   }
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
 
-  cout << "scale = " << setprecision(20) << real_part.scale() << endl;
+  cout << "scale = " << setprecision(20) << log2(real_part.scale()) << endl;
 
   rtncipher = real_part;
-  rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
-  cout << "scale = " << setprecision(20) << rtncipher.scale() << endl;
+  rtncipher.scale() = pow(2.0, 46);
+  //rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
+  cout << "scale = " << setprecision(20) << log2(rtncipher.scale()) << endl;
 }
 
 void Bootstrapper::slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher)
@@ -4311,7 +4305,6 @@ void Bootstrapper::slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, Phan
 
   rtncipher = real_part;
   rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
-  
   cout << "scale = " << setprecision(10) << rtncipher.scale() << endl;
 }
 

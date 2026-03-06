@@ -140,7 +140,6 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
     if (values_size > slots_) {
         throw std::invalid_argument("values_size is too large");
     }
-
     // Check that scale is positive and not too large
     if (scale <= 0 || (static_cast<int>(log2(scale)) > context_data.total_coeff_modulus_bit_count())) {
             std::cout<<"the scale is "<<log2(scale) <<"the total bit count "<<context_data.total_coeff_modulus_bit_count()<<std::endl;
@@ -333,7 +332,7 @@ void PhantomCKKSEncoder::decode_internal(const PhantomContext &context, const Ph
 
     if (plain.scale() <= 0 ||
         (static_cast<int>(log2(plain.scale())) > context_data.total_coeff_modulus_bit_count())) {
-    std::cout<<"the scale is "<<log2(plain.scale()) <<"the total bit count "<<context_data.total_coeff_modulus_bit_count()<<std::endl;
+    std::cout<<"the scale is 2222"<<log2(plain.scale()) <<"the total bit count "<<context_data.total_coeff_modulus_bit_count()<<std::endl;
        
         throw std::invalid_argument("scale out of bounds");
     }

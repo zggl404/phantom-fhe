@@ -1,5 +1,73 @@
 #include "cnn_phantom.h"
 
+#include <iomanip>
+#include <limits>
+#include <sstream>
+
+namespace
+{
+	constexpr bool kEnableCipherDebug = false;
+
+	double safe_log2_scale(double scale)
+	{
+		if (!std::isfinite(scale) || scale <= 0.0)
+			return -std::numeric_limits<double>::infinity();
+		return std::log2(scale);
+	}
+
+	void debug_cipher_state(const std::string &tag, const PhantomCiphertext &ct, ofstream *output = nullptr)
+	{
+		if (!kEnableCipherDebug)
+			return;
+
+		const double scale = ct.scale();
+		const double log2_scale = safe_log2_scale(scale);
+
+		std::ostringstream oss;
+		oss << "[DBG] " << tag
+			<< " chain=" << ct.chain_index()
+			<< " q=" << ct.coeff_modulus_size()
+			<< " scale=" << std::setprecision(17) << scale
+			<< " log2(scale)=" << std::setprecision(17) << log2_scale;
+		if (!std::isfinite(scale) || scale <= 0.0 || !std::isfinite(log2_scale))
+			oss << " [INVALID_SCALE]";
+		else if (log2_scale < 0.0)
+			oss << " [NEGATIVE_LOG2]";
+		else if (log2_scale < 20.0)
+			oss << " [LOW_SCALE]";
+
+		const std::string line = oss.str();
+		cout << line << endl;
+		if (output != nullptr)
+			*output << line << endl;
+	}
+
+	void debug_scale_gap(const std::string &tag, const PhantomCiphertext &lhs, const PhantomCiphertext &rhs, ofstream *output = nullptr)
+	{
+		if (!kEnableCipherDebug)
+			return;
+
+		const double lhs_log2 = safe_log2_scale(lhs.scale());
+		const double rhs_log2 = safe_log2_scale(rhs.scale());
+		const double delta = lhs_log2 - rhs_log2;
+
+		std::ostringstream oss;
+		oss << "[DBG] " << tag
+			<< " lhs_log2(scale)=" << std::setprecision(17) << lhs_log2
+			<< " rhs_log2(scale)=" << std::setprecision(17) << rhs_log2
+			<< " delta=" << std::setprecision(17) << delta;
+		if (std::isfinite(delta) && std::fabs(delta) > 1.0)
+			oss << " [SCALE_MISMATCH]";
+		if (!std::isfinite(lhs_log2) || !std::isfinite(rhs_log2))
+			oss << " [INVALID_SCALE]";
+
+		const std::string line = oss.str();
+		cout << line << endl;
+		if (output != nullptr)
+			*output << line << endl;
+	}
+} // namespace
+
 TensorCipher::TensorCipher()
 {
 	k_ = 0;
@@ -108,9 +176,13 @@ void multiplexed_parallel_convolution_print(const TensorCipher &cnn_in, TensorCi
 {
 	// cout << "multiplexed parallel convolution..." << endl;
 	output << "multiplexed parallel convolution..." << endl;
+	debug_cipher_state("conv stage=" + to_string(stage) + " input", cnn_in.cipher(), &output);
 	int logn = cnn_in.logn();
 	chrono::high_resolution_clock::time_point time_start, time_end;
 	chrono::microseconds time_diff;
+	std::cout << "multiplexed_parallel_convolution_print" << std::endl;
+	auto decry_and_print_temp_in = cnn_in.cipher();
+	decrypt_and_print(decry_and_print_temp_in, ckksevaluator, 1 << logn, 256, 2);
 
 	time_start = chrono::high_resolution_clock::now();
 	// convolution_seal_sparse(cnn_in, cnn_out, hprime, st, kernel, false, data, running_var, constant_weight, epsilon, encoder, encryptor, scale_evaluator, gal_keys, cipher_pool, end);
@@ -121,25 +193,26 @@ void multiplexed_parallel_convolution_print(const TensorCipher &cnn_in, TensorCi
 	// cout << "convolution " << stage << " result" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	// output << "convolution " << stage << " result" << endl;
-	auto decry_and_print_temp = cnn_out.cipher();
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	debug_cipher_state("conv stage=" + to_string(stage) + " output", cnn_out.cipher(), &output);
 
-	// noprintf _t _h _c _w _t _p
-	// cnn_out.print_parms();
+	auto decry_and_print_temp = cnn_out.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  cout << "scale: " << cnn_out.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  output << "scale: " << cnn_out.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		   << endl;
 }
 void multiplexed_parallel_batch_norm_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, vector<double> bias, vector<double> running_mean, vector<double> running_var, vector<double> weight, double epsilon, CKKSEvaluator &ckksevaluator, double B, ofstream &output, size_t stage, bool end)
 {
 	// cout << "multiplexed parallel batch normalization..." << endl;
 	output << "multiplexed parallel batch normalization..." << endl;
+	debug_cipher_state("bn stage=" + to_string(stage) + " input", cnn_in.cipher(), &output);
 	int logn = cnn_in.logn();
 	chrono::high_resolution_clock::time_point time_start, time_end;
 	chrono::microseconds time_diff;
@@ -153,25 +226,26 @@ void multiplexed_parallel_batch_norm_phantom_print(const TensorCipher &cnn_in, T
 	// cout << "batch normalization " << stage << " result" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	// output << "batch normalization " << stage << " result" << endl;
-	auto decry_and_print_temp = cnn_out.cipher();
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	debug_cipher_state("bn stage=" + to_string(stage) + " output", cnn_out.cipher(), &output);
 
-	// noprintf _t _h _c _w _t _p
-	// cnn_out.print_parms();
+	auto decry_and_print_temp = cnn_out.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  cout << "scale: " << cnn_out.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << cnn_out.cipher().chain_index()<< endl;
-	//  output << "scale: " << cnn_out.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		   << endl;
 }
 void approx_ReLU_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, long comp_no, vector<int> deg, long alpha, vector<Tree> &tree, double scaled_val, long scalingfactor, CKKSEvaluator &ckksevaluator, double B, ofstream &output, size_t stage)
 {
 	// cout << "approximate ReLU..." << endl << endl;
 	output << "approximate ReLU..." << endl;
+	debug_cipher_state("relu stage=" + to_string(stage) + " input", cnn_in.cipher(), &output);
 	int logn = cnn_in.logn();
 	chrono::high_resolution_clock::time_point time_start, time_end;
 	chrono::microseconds time_diff;
@@ -185,69 +259,77 @@ void approx_ReLU_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out
 	// cout << "ReLU function " << stage << " result" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	// output << "ReLU function " << stage << " result" << endl;
-	auto decry_and_print_temp = cnn_out.cipher();
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	debug_cipher_state("relu stage=" + to_string(stage) + " output", cnn_out.cipher(), &output);
 
-	// noprintf _t _h _c _w _t _p
-	// cnn_out.print_parms();
+	auto decry_and_print_temp = cnn_out.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  cout << "scale: " << cnn_out.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  output << "scale: " << cnn_out.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		   << endl;
 
 	// cout << "intermediate decrypted values: " << endl;
 	output << "intermediate decrypted values: " << endl
 		   << endl;
 	decry_and_print_temp = cnn_out.cipher();
-	// printf decrypt result and print
-	//  decrypt_and_print_txt(decry_and_print_temp, ckksevaluator, 1 << logn, 4, 1, output); // cnn_out.print_parms();
+	decrypt_and_print_txt(decry_and_print_temp, ckksevaluator, 1 << logn, 4, 1, output); // cnn_out.print_parms();
 }
 void bootstrap_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, Bootstrapper &bootstrapper, CKKSEvaluator &ckksevaluator, ofstream &output, size_t stage)
 {
 	cout << "bootstrapping..." << endl;
 	output << "bootstrapping..." << endl;
+	debug_cipher_state("bootstrap stage=" + to_string(stage) + " input", cnn_in.cipher(), &output);
 	PhantomCiphertext ctxt, rtn;
 	int logn = cnn_in.logn();
 	chrono::high_resolution_clock::time_point time_start, time_end;
 	chrono::microseconds time_diff;
+	std::cout << "before boot zgl" << std::endl;
+	auto decry_and_print_temp_in = cnn_in.cipher();
+	decrypt_and_print(decry_and_print_temp_in, ckksevaluator, 1 << logn, 256, 2);
 
 	ctxt = cnn_in.cipher();
 	time_start = chrono::high_resolution_clock::now();
 	// bootstrapper.bootstrap_3(rtn, ctxt);
-	
 	bootstrapper.slim_bootstrap(rtn, ctxt);
 	time_end = chrono::high_resolution_clock::now();
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
 	cout << "Bootstrap Time : " << time_diff.count() / 1000 << " ms" << endl;
 	// output << "time : " << time_diff.count() / 1000 << " ms" << endl;
 	cnn_out.set_ciphertext(rtn);
+	debug_cipher_state("bootstrap stage=" + to_string(stage) + " output", cnn_out.cipher(), &output);
 	// cout << "bootstrapping " << stage << " result" << endl;
 	// output << "bootstrapping " << stage << " result" << endl;
-	auto decry_and_print_temp = cnn_out.cipher();
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p
-	// cnn_out.print_parms();
+	auto decry_and_print_temp = cnn_out.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  cout << "scale: " << cnn_out.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  output << "scale: " << cnn_out.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		   << endl;
+
+	if (not after_cnn_first_boot)
+	{
+		after_cnn_first_boot = true;
+	}
 }
 
 void multiplexed_parallel_downsampling_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, CKKSEvaluator &ckksevaluator, ofstream &output)
 {
 	// cout << "multiplexed parallel downsampling..." << endl;
 	output << "multiplexed parallel downsampling..." << endl;
+	debug_cipher_state("downsample input", cnn_in.cipher(), &output);
 	int logn = cnn_in.logn();
 	chrono::high_resolution_clock::time_point time_start, time_end;
 	chrono::microseconds time_diff;
@@ -258,25 +340,26 @@ void multiplexed_parallel_downsampling_phantom_print(const TensorCipher &cnn_in,
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
 	cout << "Multiplexed Parallel Downsampling time : " << time_diff.count() / 1000 << " ms" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
-	auto decry_and_print_temp = cnn_out.cipher();
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	debug_cipher_state("downsample output", cnn_out.cipher(), &output);
 
-	// noprintf _t _h _c _w _t _p
-	// cnn_out.print_parms();
+	auto decry_and_print_temp = cnn_out.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  cout << "scale: " << cnn_out.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  output << "scale: " << cnn_out.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		   << endl;
 }
 void averagepooling_phantom_scale_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, CKKSEvaluator &ckksevaluator, double B, ofstream &output)
 {
 	// cout << "average pooling..." << endl;
 	output << "average pooling..." << endl;
+	debug_cipher_state("avgpool input", cnn_in.cipher(), &output);
 	int logn = cnn_in.logn();
 	chrono::high_resolution_clock::time_point time_start, time_end;
 	chrono::microseconds time_diff;
@@ -288,25 +371,26 @@ void averagepooling_phantom_scale_print(const TensorCipher &cnn_in, TensorCipher
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
 	cout << "Averagepooling Phantom Scale Time : " << time_diff.count() / 1000 << " ms" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
-	auto decry_and_print_temp = cnn_out.cipher();
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	debug_cipher_state("avgpool output", cnn_out.cipher(), &output);
 
-	// noprintf _t _h _c _w _t _p
-	// cnn_out.print_parms();
+	auto decry_and_print_temp = cnn_out.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  cout << "scale: " << cnn_out.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << cnn_out.cipher().chain_index()<< endl;
-	//  output << "scale: " << cnn_out.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		   << endl;
 }
 void fully_connected_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn_out, vector<double> matrix, vector<double> bias, int q, int r, CKKSEvaluator &ckksevaluator, ofstream &output)
 {
 	// cout << "fully connected layer..." << endl;
 	output << "fully connected layer..." << endl;
+	debug_cipher_state("fc input", cnn_in.cipher(), &output);
 	int logn = cnn_in.logn();
 	chrono::high_resolution_clock::time_point time_start, time_end;
 	chrono::microseconds time_diff;
@@ -317,20 +401,20 @@ void fully_connected_phantom_print(const TensorCipher &cnn_in, TensorCipher &cnn
 	time_diff = chrono::duration_cast<chrono::milliseconds>(time_end - time_start);
 	cout << "Fully Connected time : " << time_diff.count() / 1000 << " ms" << endl;
 	output << "time : " << time_diff.count() / 1000 << " ms" << endl;
-	auto decry_and_print_temp = cnn_out.cipher();
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+	debug_cipher_state("fc output", cnn_out.cipher(), &output);
 
-	// noprintf _t _h _c _w _t _p
-	// cnn_out.print_parms();
+	auto decry_and_print_temp = cnn_out.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	cnn_out.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  cout << "scale: " << cnn_out.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
-	//  output << "scale: " << cnn_out.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << cnn_out.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(cnn_out.cipher().scale()) << endl
+		   << endl;
 }
 // void multiplexed_parallel_convolution_phantom(const TensorCipher &cnn_in, TensorCipher &cnn_out, int co, int st, int fh, int fw, const vector<double> &data, vector<double> running_var, vector<double> constant_weight, double epsilon, CKKSEncoder &encoder, Encryptor &encryptor, Evaluator &evaluator, GaloisKeys &gal_keys, vector<PhantomCiphertext> &cipher_pool, bool end)
 void multiplexed_parallel_convolution_phantom(const TensorCipher &cnn_in, TensorCipher &cnn_out, int co, int st, int fh, int fw, const vector<double> &data, vector<double> running_var, vector<double> constant_weight, double epsilon, CKKSEvaluator &ckksevaluator, vector<PhantomCiphertext> &cipher_pool, bool end)
@@ -524,6 +608,8 @@ void multiplexed_parallel_convolution_phantom(const TensorCipher &cnn_in, Tensor
 			}
 		}
 		ckksevaluator.evaluator.rescale_to_next_inplace(*sum);
+		if (i9 == 0 || i9 == q - 1)
+			debug_cipher_state("conv inner after sum rescale i9=" + to_string(i9), *sum);
 		*var = *sum;
 
 		// summation for all input channels
@@ -582,8 +668,11 @@ void multiplexed_parallel_convolution_phantom(const TensorCipher &cnn_in, Tensor
 			else
 				ckksevaluator.evaluator.add_inplace_reduced_error(*total_sum, *temp);
 		}
+		if (i9 == 0 || i9 == q - 1)
+			debug_cipher_state("conv inner after collect i9=" + to_string(i9), *total_sum);
 	}
 	ckksevaluator.evaluator.rescale_to_next_inplace(*total_sum);
+	debug_cipher_state("conv inner after total_sum rescale", *total_sum);
 	*var = *total_sum;
 
 	// po copies
@@ -677,24 +766,26 @@ void cipher_add_phantom_print(const TensorCipher &cnn1, const TensorCipher &cnn2
 {
 	// cout << "cipher add..." << endl;
 	output << "cipher add..." << endl;
+	debug_scale_gap("residual_add pre-check", cnn1.cipher(), cnn2.cipher(), &output);
+	debug_cipher_state("residual_add lhs", cnn1.cipher(), &output);
+	debug_cipher_state("residual_add rhs", cnn2.cipher(), &output);
 	int logn = cnn1.logn();
 	cnn_add_phantom(cnn1, cnn2, destination, ckksevaluator);
+	debug_cipher_state("residual_add output", destination.cipher(), &output);
 	// cout << "cipher add result" << endl;
-	auto decry_and_print_temp = destination.cipher();
-	// noprintf decrypt print
-	// decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
 
-	// noprintf _t _h _c _w _t _p
-	// destination.print_parms();
+	auto decry_and_print_temp = destination.cipher();
+	decrypt_and_print(decry_and_print_temp, ckksevaluator, 1 << logn, 256, 2);
+
+	destination.print_parms();
 	// decrypt_and_print_txt(cnn_out.cipher(), decryptor, encoder, 1<<logn, 256, 2, output); cnn_out.print_parms();
 
-	// noprintf remain and level scale
-	//  cout << "remaining level : " << destination.cipher().chain_index() << endl;
-	//  cout << "scale: " << destination.cipher().scale() << endl
-	//  	 << endl;
-	//  output << "remaining level : " << destination.cipher().chain_index() << endl;
-	//  output << "scale: " << destination.cipher().scale() << endl
-	//  	   << endl;
+	cout << "remaining level : " << destination.cipher().chain_index() << endl;
+	cout << "log2(scale): " << std::log2(destination.cipher().scale()) << endl
+		 << endl;
+	output << "remaining level : " << destination.cipher().chain_index() << endl;
+	output << "log2(scale): " << std::log2(destination.cipher().scale()) << endl
+		   << endl;
 }
 
 void cnn_add_phantom(const TensorCipher &cnn1, const TensorCipher &cnn2, TensorCipher &destination, CKKSEvaluator &ckksevaluator)
@@ -857,7 +948,7 @@ void averagepooling_phantom_scale(const TensorCipher &cnn_in, TensorCipher &cnn_
 	}
 	ckksevaluator.evaluator.rescale_to_next_inplace(sum);
 
-	// cout << "rescaling results" << endl;
+	cout << "rescaling results" << endl;
 	// output << "rescaling results" << endl;
 	// decrypt_and_print_txt(sum, decryptor, encoder, 1<<logn, 256, 2, output);
 
@@ -913,17 +1004,148 @@ void matrix_multiplication_phantom(const TensorCipher &cnn_in, TensorCipher &cnn
 void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree> &tree, double scaled_val, long scalingfactor, CKKSEvaluator &ckksevaluator, PhantomCiphertext &cipher_in, PhantomCiphertext &cipher_res)
 {
 	// variables
-	vector<vector<RR>> decomp_coeff(comp_no, vector<RR>(0));
+	vector<vector<RR>> decomp_coeff(comp_no);
 	vector<double> scale_val(comp_no, 0.0);
+	vector<long> coeff_counts(comp_no, 0);
 	PhantomPlaintext plain_half;
 	PhantomCiphertext cipher_temp, cipher_half, cipher_x;
-	auto to_rr = [](double value) { return NTL::to_RR(value); };
+	long total_coeff_count = 0;
+	for (int i = 0; i < comp_no; i++)
+	{
+		coeff_counts[i] = coeff_number(deg[i], tree[i]);
+		total_coeff_count += coeff_counts[i];
+	}
 
-	// ifstream and scale
-	string str;
-	string addr = "../result";
-	str = addr + "/d" + to_string(alpha) + ".txt";
-	ifstream in(str);
+	// d13 coefficients can be embedded to avoid runtime dependency on ../result/d13.txt.
+	static const char *kD13Coeffs[] = {
+		"-0.3641546140033257227473483e-26",
+		"2.622031294178149318741415",
+		"-0.294294464505804284144951e-25",
+		"-0.9310889164412228702717724",
+		"-0.1544530172328624903633377e-25",
+		"0.7775778835627185770756487",
+		"0.2319452681555827494485407e-25",
+		"-0.6820636454440426726146996",
+		"0.1304666218570296524226426e-26",
+		"2.316741641042597404126833",
+		"-0.5215866273739493526490395e-25",
+		"-0.4875722802935523113299916",
+		"0.7339239556959662741363287e-26",
+		"4.486375957053296304953626",
+		"0.5839225408126119242283858e-25",
+		"-8.054040240127246019515179",
+		"-0.8245498268032537386060778e-27",
+		"1.320187902590630247960405",
+		"0.6057439363704359454615777e-27",
+		"-1.159129661920268143501403",
+		"-0.1649250745634413010009523e-27",
+		"-0.09928372905289601883809576",
+		"-0.1496049032323204716336279e-26",
+		"-0.9528250307151060370788953",
+		"-0.1545503759542704392393262e-26",
+		"0.226315526649123713453459",
+		"0.1206563253377177596548316e-26",
+		"-0.7817972692580585279786384",
+		"-0.2447951127656944564775002e-26",
+		"1.592573348063862722597582",
+		"-0.561420485745657085485901e-26",
+		"-6.994522774386655274495736",
+		"-0.1939872100289088980863646e-30",
+		"-0.08571578801699605035052129",
+		"-0.3165082165055072697044108e-30",
+		"-1.549585219813249516944109",
+		"-0.2238565537614761223272434e-30",
+		"-0.3625634874002511279352164",
+		"-0.1164830597689358794869202e-30",
+		"-0.4909369382694933896785904",
+		"-0.2489941101337190110064362e-30",
+		"-1.578245930070935808218402",
+		"-0.3773491650501173812758467e-30",
+		"-1.454822747076223195989722",
+		"-0.2501514847599945962013972e-30",
+		"-0.65109058284069305802726",
+		"-0.1249637410550122538313594e-30",
+		"-0.3720350347641600535355928",
+		"-0.6214216664170278345720928e-31",
+		"-0.3946516840961321739194775",
+		"-0.7258325725620029575777734e-31",
+		"-0.2822332391166878180162891",
+		"-0.3760094498379426317448427e-31",
+		"-0.1053514738232337479247634",
+		"-0.1544606120543108595340967e-31",
+		"-0.05262597626056756964693152",
+		"-0.6681920569233127978687107e-32",
+		"-0.03546546856383754528219828",
+		"-0.4137806498045815162905319e-32",
+		"-0.0181681886882269241778522"};
+	if (kEnableCipherDebug)
+		cout << "[DBG] minimax ReLU alpha=" << alpha << endl;
+	if (alpha == 13)
+	{
+		std::cout << "In here i read data directly~" << std::endl;
+		if (kEnableCipherDebug)
+			cout << "[DBG] minimax ReLU coefficients source: embedded d13" << endl;
+		const size_t embedded_count = sizeof(kD13Coeffs) / sizeof(kD13Coeffs[0]);
+		if (static_cast<size_t>(total_coeff_count) != embedded_count)
+		{
+			throw std::runtime_error(
+				"Embedded d13 coefficient count mismatch. expected " +
+				to_string(total_coeff_count) + ", got " + to_string(embedded_count));
+		}
+
+		size_t coeff_idx = 0;
+		for (int i = 0; i < comp_no; i++)
+		{
+			for (int j = 0; j < coeff_counts[i]; j++, coeff_idx++)
+			{
+				RR temp;
+				std::istringstream iss(kD13Coeffs[coeff_idx]);
+				if (!(iss >> temp))
+				{
+					throw std::runtime_error(
+						"Failed to parse embedded d13 coefficient at index " +
+						to_string(coeff_idx));
+				}
+				decomp_coeff[i].emplace_back(temp);
+			}
+		}
+	}
+	else
+	{
+		if (kEnableCipherDebug)
+			cout << "[DBG] minimax ReLU coefficients source: ../result/d" << alpha << ".txt" << endl;
+		// ifstream and scale
+		string str;
+		string addr = "../result";
+		str = addr + "/d" + to_string(alpha) + ".txt";
+		ifstream in(str);
+		if (!in.is_open())
+		{
+			throw std::runtime_error(
+				"Cannot open minimax ReLU coefficient file: " + str +
+				". Please check whether the result directory exists and contains this file.");
+		}
+
+		// print degrees and coefficients of the component polynomials of minimax composite polynomial
+		// for(int i=0; i<comp_no; i++) cout << deg[i] << " ";
+		// cout << endl;
+		for (int i = 0; i < comp_no; i++)
+		{
+			for (int j = 0; j < coeff_counts[i]; j++)
+			{
+				RR temp;
+				if (!(in >> temp))
+				{
+					throw std::runtime_error(
+						"Failed to read minimax ReLU coefficients from: " + str +
+						". The file may be incomplete or corrupted.");
+				}
+				decomp_coeff[i].emplace_back(temp);
+				// cout << decomp_coeff[i][j] << " ";
+			}
+			// cout << endl;
+		}
+	}
 
 	// scaled value setting
 	scale_val[0] = 1.0;
@@ -931,27 +1153,12 @@ void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree
 		scale_val[i] = 2.0;
 	scale_val[comp_no - 1] = scaled_val;
 
-	// print degrees and coefficients of the component polynomials of minimax composite polynomial
-	// for(int i=0; i<comp_no; i++) cout << deg[i] << " ";
-	// cout << endl;
-	for (int i = 0; i < comp_no; i++)
-	{
-		for (int j = 0; j < coeff_number(deg[i], tree[i]); j++)
-		{
-			double temp;
-			in >> temp;
-			decomp_coeff[i].emplace_back(to_rr(temp));
-			// cout << decomp_coeff[i][j] << " ";
-		}
-		// cout << endl;
-	}
-
 	// scale coefficients properly so that unnecessary level consumptions do not occur
 	for (int i = 0; i < comp_no - 1; i++)
-		for (int j = 0; j < coeff_number(deg[i], tree[i]); j++)
-			decomp_coeff[i][j] /= to_rr(scale_val[i + 1]);
-	for (int j = 0; j < coeff_number(deg[comp_no - 1], tree[comp_no - 1]); j++)
-		decomp_coeff[comp_no - 1][j] *= to_rr(0.5); // scale
+		for (int j = 0; j < coeff_counts[i]; j++)
+			decomp_coeff[i][j] /= scale_val[i + 1];
+	for (int j = 0; j < coeff_counts[comp_no - 1]; j++)
+		decomp_coeff[comp_no - 1][j] *= 0.5; // scale
 
 	// generation of half PhantomCiphertext
 	long n = cipher_in.poly_modulus_degree() / 2;
@@ -959,6 +1166,7 @@ void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree
 	for (int i = 0; i < n; i++)
 		m_half[i] = 0.5;
 	cipher_x = cipher_in;
+	debug_cipher_state("minimax input", cipher_x);
 
 	// evaluating pk ... p1(x) / 2
 	for (int i = 0; i < comp_no; ++i)
@@ -966,9 +1174,10 @@ void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree
 		// cout << "*******************************************" << endl;
 		// cout << "               No: " << i << endl;
 		eval_polynomial_integrate(ckksevaluator, cipher_x, cipher_x, deg[i], decomp_coeff[i], tree[i]);
+		debug_cipher_state("minimax after polynomial i=" + to_string(i), cipher_x);
 
 		// noprintf result
-		// decrypt_and_print_part(cipher_x, ckksevaluator, n, 0, 5);
+		decrypt_and_print_part(cipher_x, ckksevaluator, n, 0, 5);
 	}
 
 	// x(1+sgn(x))/2 from sgn(x)/2
@@ -977,6 +1186,7 @@ void minimax_ReLU_phantom(long comp_no, vector<int> deg, long alpha, vector<Tree
 	ckksevaluator.evaluator.add_reduced_error(cipher_x, cipher_half, cipher_temp);
 	ckksevaluator.evaluator.multiply_reduced_error(cipher_temp, cipher_in, *(ckksevaluator.relin_keys), cipher_res);
 	ckksevaluator.evaluator.rescale_to_next_inplace(cipher_res);
+	debug_cipher_state("minimax output", cipher_res);
 }
 
 void memory_save_rotate(const PhantomCiphertext &cipher_in, PhantomCiphertext &cipher_out, int steps, CKKSEvaluator &ckksevaluator)
@@ -1084,7 +1294,8 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 	vector<RR> pt_not_cph(deg + 10);
 	vector<string> t_trace(deg + 10);
 	vector<string> pt_trace(deg + 10);
-	auto coeff_to_double = [](const RR &value) { return NTL::conv<double>(value); };
+	auto coeff_to_double = [](const RR &value)
+	{ return NTL::conv<double>(value); };
 
 	double scale = cipher.scale(); // ex) 2^42. exact value.
 	long n = cipher.poly_modulus_degree() / 2;
@@ -1354,31 +1565,31 @@ void eval_polynomial_integrate(CKKSEvaluator &ckksevaluator, PhantomCiphertext &
 				{
 					// cout << "T: " << g << endl;
 					T[g] = std::make_unique<PhantomCiphertext>();
-						if (g % 2 == 0)
-						{
-							if (T[g / 2] == nullptr)
-								throw std::runtime_error("T[g/2] is not set");
-							if (T[0] == nullptr)
-								throw std::runtime_error("T[0] is not set");
-							evalT(ckksevaluator, *T[g], *T[g / 2], *T[g / 2], *T[0]);
-							t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[g / 2] * FixedPoint(2.0, prec) - t_not_cph[0];
-							t_trace[g] = string("(") + t_trace[g / 2] + "^2 * R(2.0) - " + t_trace[0] + ")";
-						}
-						else
-						{
-							if (T[g / 2] == nullptr)
-								throw std::runtime_error("T[g/2] is not set");
-							if (T[(g + 1) / 2] == nullptr)
-								throw std::runtime_error("T[(g+1)/2] is not set");
-							if (T[0] == nullptr)
-								throw std::runtime_error("T[0] is not set");
-							evalT(ckksevaluator, *T[g], *T[g / 2], *T[(g + 1) / 2], *T[1]);
-							t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[(g + 1) / 2] * FixedPoint(2.0, prec) - t_not_cph[1];
-							t_trace[g] = string("(") + t_trace[g / 2] + " * " + t_trace[(g + 1) / 2] + " * R(2.0) - " + t_trace[1] + ")";
-						}
-						// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *T[g]);
+					if (g % 2 == 0)
+					{
+						if (T[g / 2] == nullptr)
+							throw std::runtime_error("T[g/2] is not set");
+						if (T[0] == nullptr)
+							throw std::runtime_error("T[0] is not set");
+						evalT(ckksevaluator, *T[g], *T[g / 2], *T[g / 2], *T[0]);
+						t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[g / 2] * FixedPoint(2.0, prec) - t_not_cph[0];
+						t_trace[g] = string("(") + t_trace[g / 2] + "^2 * R(2.0) - " + t_trace[0] + ")";
 					}
+					else
+					{
+						if (T[g / 2] == nullptr)
+							throw std::runtime_error("T[g/2] is not set");
+						if (T[(g + 1) / 2] == nullptr)
+							throw std::runtime_error("T[(g+1)/2] is not set");
+						if (T[0] == nullptr)
+							throw std::runtime_error("T[0] is not set");
+						evalT(ckksevaluator, *T[g], *T[g / 2], *T[(g + 1) / 2], *T[1]);
+						t_not_cph[g] = t_not_cph[g / 2] * t_not_cph[(g + 1) / 2] * FixedPoint(2.0, prec) - t_not_cph[1];
+						t_trace[g] = string("(") + t_trace[g / 2] + " * " + t_trace[(g + 1) / 2] + " * R(2.0) - " + t_trace[1] + ")";
+					}
+					// print_cipher(decryptor, encoder, public_key, secret_key, relin_keys, *T[g]);
 				}
+			}
 			for (int j = 1; j <= tree.m - 1; j++)
 			{
 				int g = pow2(j) * tree.b;
@@ -1503,7 +1714,7 @@ void decrypt_and_print_part(PhantomCiphertext &cipher, CKKSEvaluator &ckksevalua
 		cout << rtn_vec[i] << ", ";
 	cout << "... ";
 	cout << ")" << endl;
-	cout << "scale: " << cipher.scale() << endl;
+	cout << "log2(scale): " << std::log2(cipher.scale()) << endl;
 }
 void decrypt_and_print_txt(PhantomCiphertext &cipher, CKKSEvaluator &ckksevaluator, long sparse_slots, size_t front, size_t back, ofstream &output)
 {

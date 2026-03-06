@@ -386,7 +386,7 @@ void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphe
   cos_tmp1 = cipher;
   PhantomCiphertext sin_rtn, cos_rtn;
 
-  double inv_of_scale_for_eval = 1.0 / scale_for_eval;
+  scaling_for_turn_back_q();
 
   sin_polynomial.homomorphic_poly_evaluation(ckks, cos_tmp2, cos_tmp1);
   cout << "after sin poly, #q = " << cos_tmp2.coeff_modulus_size() << endl;
@@ -404,7 +404,7 @@ void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphe
 
   eval_polynomial_integrate(*ckks, cos_rtn, cos_tmp2, 127, arcsin_decomp_coeff, arcsin_tree);
   cout << "after eval arcsin, #q = " << cos_rtn.coeff_modulus_size() << endl;
-  ckks->evaluator.add_const_inplace(cos_rtn, 0.125 / scale_for_eval * 0.5);
+  ckks->evaluator.add_const_inplace(cos_rtn, abs_lift);
 
   inverse_sin_polynomial_v1.homomorphic_poly_evaluation(ckks, sin_rtn, sin_tmp2);
   // inverse_sin_polynomial_v1.homomorphic_poly_evaluation_naive(context, encoder, encryptor, evaluator, relin_keys, sin_rtn, sin_tmp2, decryptor);
