@@ -10,13 +10,14 @@ Bootstrapper::Bootstrapper(
     long _sin_cos_deg,
     long _scale_factor,
     long _inverse_deg,
-    CKKSEvaluator *_ckks)
-    : loge(_loge), logn(_logn), logNh(_logNh), L(_L), final_scale(_final_scale), boundary_K(_boundary_K), sin_cos_deg(_sin_cos_deg), scale_factor(_scale_factor), inverse_deg(_inverse_deg), ckks(_ckks)
+    CKKSEvaluator *_ckks,
+    bool _enable_slim_relu)
+    : loge(_loge), logn(_logn), logNh(_logNh), L(_L), final_scale(_final_scale), boundary_K(_boundary_K), sin_cos_deg(_sin_cos_deg), scale_factor(_scale_factor), inverse_deg(_inverse_deg), ckks(_ckks), slim_use_relu(_enable_slim_relu)
 {
   n = 1 << logn;
   Nh = 1 << logNh;
   mod_reducer =
-      new ModularReducer(boundary_K, (double)loge, sin_cos_deg, scale_factor, inverse_deg, ckks);
+      new ModularReducer(boundary_K, (double)loge, sin_cos_deg, scale_factor, inverse_deg, ckks, slim_use_relu);
 }
 
 void Bootstrapper::addLeftRotKeys_Linear_to_vector(vector<int> &gal_steps_vector)
@@ -2142,8 +2143,17 @@ void Bootstrapper::generate_LT_coefficient_3()
 void Bootstrapper::prepare_mod_polynomial()
 {
   mod_reducer->set_relu_mode(slim_use_relu);
-  mod_reducer->generate_sin_cos_polynomial();
-  mod_reducer->generate_inverse_sine_polynomial();
+  if (slim_use_relu)
+  {
+    mod_reducer->generate_sin_cos_polynomial_relu();
+    mod_reducer->generate_inverse_sine_polynomial_relu();
+  }
+  else
+  {
+    mod_reducer->generate_sin_cos_polynomial();
+    mod_reducer->generate_inverse_sine_polynomial();
+  }
+
   // mod_reducer->write_polynomials();
 }
 
@@ -4014,13 +4024,27 @@ void Bootstrapper::slim_sfl_full_3(PhantomCiphertext &rtncipher, PhantomCipherte
   PhantomCiphertext tmpct2;
   bsgs_linear_transform(tmpct2, tmpct, totlen2, basicstep2, logn, fftcoeff2[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct2);
-
-  auto fftcoeff3_scale(fftcoeff3[slot_index]);
-  for (auto &v : fftcoeff3_scale)
+  vector<vector<complex<double>>> fftcoeff3_scale;
+  if (slim_use_relu)
   {
-    for (auto &e : v)
+    fftcoeff3_scale = fftcoeff3[slot_index];
+    for (auto &v : fftcoeff3_scale)
     {
-      e *= scale_for_eval;
+      for (auto &e : v)
+      {
+        e *= scale_for_eval;
+      }
+    }
+  }
+  else
+  {
+    fftcoeff3_scale = fftcoeff3[slot_index];
+    for (auto &v : fftcoeff3_scale)
+    {
+      for (auto &e : v)
+      {
+        e *= 1.0276586;
+      }
     }
   }
 
@@ -4092,15 +4116,30 @@ void Bootstrapper::slim_sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &c
   PhantomCiphertext tmpct2;
   bsgs_linear_transform(tmpct2, tmpct, totlen2, basicstep2, logn + 1, fftcoeff2[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct2);
-
-  auto fftcoeff3_scale(fftcoeff3[slot_index]);
-  for (auto &v : fftcoeff3_scale)
+  vector<vector<complex<double>>> fftcoeff3_scale;
+  if (slim_use_relu)
   {
-    for (auto &e : v)
+    fftcoeff3_scale = fftcoeff3[slot_index];
+    for (auto &v : fftcoeff3_scale)
     {
-      e *= 2.0; // magic num, to check again
-      e *= scale_for_eval;
-      e *= scale_for_boost_relu_range;
+      for (auto &e : v)
+      {
+        e *= 2.0; // magic num, to check again
+        e *= scale_for_eval;
+        e *= scale_for_boost_relu_range;
+      }
+    }
+  }
+  else
+  {
+    fftcoeff3_scale = fftcoeff3[slot_index];
+    for (auto &v : fftcoeff3_scale)
+    {
+      for (auto &e : v)
+      {
+        e *= 2;
+        e *= 1.0276586;
+      }
     }
   }
 
@@ -4226,7 +4265,7 @@ void Bootstrapper::slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, Phantom
   cout << "level = " << real_part.coeff_modulus_size() - 1 << endl;
   PhantomCiphertext conj;
   ckks->evaluator.complex_conjugate(real_part, *(ckks->galois_keys), conj);
-  
+
   ckks->evaluator.add_inplace(real_part, conj);
 
   cout << "Modular reduction..." << endl;
@@ -4245,8 +4284,8 @@ void Bootstrapper::slim_bootstrap_sparse_3(PhantomCiphertext &rtncipher, Phantom
   cout << "scale = " << setprecision(20) << log2(real_part.scale()) << endl;
 
   rtncipher = real_part;
-  rtncipher.scale() = pow(2.0, 46);
-  //rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
+  //rtncipher.scale() = pow(2.0, 46);
+  rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
   cout << "scale = " << setprecision(20) << log2(rtncipher.scale()) << endl;
 }
 
@@ -4307,8 +4346,6 @@ void Bootstrapper::slim_bootstrap_full_real_3(PhantomCiphertext &rtncipher, Phan
   rtncipher.scale() = initial_scale * rtncipher.scale() / (double)modulus[0].value();
   cout << "scale = " << setprecision(10) << rtncipher.scale() << endl;
 }
-
-
 
 void Bootstrapper::slim_coefftoslot_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher)
 {

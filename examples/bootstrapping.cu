@@ -25,14 +25,14 @@ int main()
   long boundary_K = 25;
   long deg = 59;
   long scale_factor = 2;
-  long inverse_deg = 127;
-  bool enable_relu = true;
+  long inverse_deg = 1;
+  bool enable_relu = false;
 
   // The following parameters have been adjusted to satisfy the memory constraints of an H800 GPU
   long logN = 16; // 16 -> 15
   long loge = 10;
 
-  long logn = 15; // 14 -> 13
+  long logn = 14; // 14 -> 13
   size_t sparse_slot_count = 1 << logn;
 
   int logp = 47;
@@ -43,15 +43,16 @@ int main()
   int special_modulus_size = 4;
   int secret_key_hamming_weight = 192;
 
-  int remaining_level = 3; // s2c
+  int remaining_level = 3+7; // s2c
   int boot_level = 3       // c2s
                    + 6 + 2 // sin & double angle => sin(2*pi*x)
-                   + 1     // one more double angle => cos(4*pi*x)
+                   + 1    // one more double angle => cos(4*pi*x)
                    + 7;    // arcsin / 2 / pi (?)
   int total_level = remaining_level + boot_level;
 
   vector<int> coeff_bit_vec;
   coeff_bit_vec.push_back(logq);
+ 
   for (int i = 0; i < remaining_level; i++)
   {
     coeff_bit_vec.push_back(logp);
@@ -93,8 +94,8 @@ int main()
       deg,
       scale_factor,
       inverse_deg,
-      &ckks_evaluator);
-  bootstrapper.set_slim_relu(enable_relu);
+      &ckks_evaluator,enable_relu);
+  //bootstrapper.set_slim_relu(enable_relu);
 
   std::cout << "Generating Optimal Minimax Polynomials..." << endl;
   bootstrapper.prepare_mod_polynomial();
@@ -139,7 +140,7 @@ int main()
   {
     ckks_evaluator.evaluator.mod_switch_to_next_inplace(cipher);
   }
-
+  std::cout<<"the initial scale is "<<log2(cipher.scale())<<std::endl;
   // Decrypt input cipher to obtain the original input
   ckks_evaluator.decryptor.decrypt(cipher, plain);
   ckks_evaluator.encoder.decode(plain, before);
@@ -175,7 +176,7 @@ int main()
       max_err = max(max_err, curr_err);
     }
     avg_err += curr_err;
-    if (i < 100 || i > sparse_slot_count-100)
+    if (i < 10 || i > sparse_slot_count-10)
     {
       cout << "(" << input[i] << ", " << after[i] << "), ";
     }

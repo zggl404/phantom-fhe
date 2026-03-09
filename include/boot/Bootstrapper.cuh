@@ -52,7 +52,8 @@ class Bootstrapper {
       long _sin_cos_deg,
       long _scale_factor,
       long _inverse_deg,
-      CKKSEvaluator *ckks);
+      CKKSEvaluator *ckks,
+      bool _enable_slim_relu = false);
 
   inline void set_final_scale(double _final_scale) {
     final_scale = _final_scale;

@@ -4,14 +4,16 @@
 #include <iomanip>
 
 ModularReducer::ModularReducer(long _boundary_K, double _log_width, long _deg, long _num_double_formula, long _inverse_deg,
-                               CKKSEvaluator *_ckks) : boundary_K(_boundary_K), log_width(_log_width), deg(_deg), num_double_formula(_num_double_formula), inverse_deg(_inverse_deg), ckks(_ckks)
+                               CKKSEvaluator *_ckks, bool _use_relu_mode) : boundary_K(_boundary_K), log_width(_log_width), deg(_deg), num_double_formula(_num_double_formula), inverse_deg(_inverse_deg), ckks(_ckks), use_relu_mode(_use_relu_mode)
 {
-  // inverse_log_width = -log2(sin(2 * M_PI * pow(2.0, -log_width)));
-  // poly_generator = new RemezCos(rmparm, boundary_K, log_width, deg, (1 << num_double_formula));
-  // inverse_poly_generator = new RemezArcsin(rmparm, inverse_log_width, inverse_deg);
-
-  // inverse_poly_generator->params.log_scan_step_diff = 12;
-  // inverse_poly_generator->params.RR_prec = 1000;
+  if (!use_relu_mode)
+  {
+    inverse_log_width = -log2(sin(2 * M_PI * pow(2.0, -log_width)));
+    poly_generator = new RemezSin(rmparm, boundary_K, log_width, deg, (1 << num_double_formula));
+    inverse_poly_generator = new RemezArcsin(rmparm, inverse_log_width, inverse_deg);
+    inverse_poly_generator->params.log_scan_step_diff = 12;
+    inverse_poly_generator->params.RR_prec = 1000;
+  }
 }
 
 void ModularReducer::double_angle_formula(PhantomCiphertext &cipher)
@@ -33,6 +35,25 @@ void ModularReducer::double_angle_formula_scaled(PhantomCiphertext &cipher, doub
 }
 
 void ModularReducer::generate_sin_cos_polynomial()
+{
+  poly_generator->generate_optimal_poly(sin_cos_polynomial);
+  sin_cos_polynomial.generate_poly_heap();
+}
+void ModularReducer::generate_inverse_sine_polynomial()
+{
+  inverse_poly_generator->generate_optimal_poly(inverse_sin_polynomial);
+  if (inverse_deg > 3)
+    inverse_sin_polynomial.generate_poly_heap_odd();
+  if (inverse_deg == 1)
+  {
+    scale_inverse_coeff = to_double(inverse_sin_polynomial.coeff[1]);
+    for (int i = 0; i < num_double_formula; i++)
+      scale_inverse_coeff = sqrt(scale_inverse_coeff);
+    sin_cos_polynomial.constmul(to_RR(scale_inverse_coeff));
+    sin_cos_polynomial.generate_poly_heap();
+  }
+}
+void ModularReducer::generate_sin_cos_polynomial_relu()
 {
   // sin_generator->generate_optimal_poly(sin_polynomial);
   RR coeffs[] = {
@@ -98,14 +119,14 @@ void ModularReducer::generate_sin_cos_polynomial()
       RR(-107962886396.68134)};
   sin_polynomial.set_polynomial(deg, coeffs, "power");
   sin_polynomial.generate_poly_heap();
-  //sin_polynomial.showcoeff();
+  // sin_polynomial.showcoeff();
 
   cos_polynomial.set_polynomial(deg, coeffs, "power");
   cos_polynomial.generate_poly_heap();
-  //cos_polynomial.showcoeff();
+  // cos_polynomial.showcoeff();
 }
 
-void ModularReducer::generate_inverse_sine_polynomial()
+void ModularReducer::generate_inverse_sine_polynomial_relu()
 {
   // inverse_sin_generator->generate_optimal_poly(inverse_sin_polynomial);
   {
@@ -152,7 +173,7 @@ void ModularReducer::generate_inverse_sine_polynomial()
         RR(NTL::INIT_VAL_TYPE{}, "-4.2005464365314365056914532097070591744796635056007673884285548727683343842567724e-66"),
         RR(NTL::INIT_VAL_TYPE{}, "13355.853558204680018492786448903280528249651256497222226676393541186558489225246")};
     inverse_sin_polynomial_v1.set_polynomial(taylor_coeffs.size() - 1, taylor_coeffs.data(), "power");
-    //inverse_sin_polynomial_v1.showcoeff();
+    // inverse_sin_polynomial_v1.showcoeff();
   }
   inverse_sin_polynomial_v1.generate_poly_heap();
   double inv_of_scale_for_eval = 1.0 / scale_for_eval;
@@ -306,7 +327,7 @@ void ModularReducer::generate_inverse_sine_polynomial()
   {
     RR temp = to_RR(kArcsinD127[j]);
 
-    //temp *= RR(0.5); // for abs
+    // temp *= RR(0.5); // for abs
     temp *= RR(0.25); // for relu
     temp *= RR(inv_of_scale_for_eval);
     arcsin_decomp_coeff.emplace_back(temp);
@@ -315,8 +336,8 @@ void ModularReducer::generate_inverse_sine_polynomial()
   // cout << endl;
   arcsin_decomp_coeff_original = arcsin_decomp_coeff;
 
-  //abs_lift = 0.125 * inv_of_scale_for_eval; // no 0.5 for abs
-  abs_lift = 0.125 * inv_of_scale_for_eval*0.5; // one 0.5 for relu
+  // abs_lift = 0.125 * inv_of_scale_for_eval; // no 0.5 for abs
+  abs_lift = 0.125 * inv_of_scale_for_eval * 0.5; // one 0.5 for relu
 }
 
 double scale_for_boost_relu_range = 2.0;
@@ -355,29 +376,27 @@ void ModularReducer::write_polynomials()
 
 void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext &cipher)
 {
-  PhantomCiphertext sin_tmp1, sin_tmp2, cos_tmp1, cos_tmp2;
-  sin_tmp1 = cipher;
-  cos_tmp1 = cipher;
-  PhantomCiphertext sin_rtn, cos_rtn;
+  PhantomCiphertext tmp1, tmp2;
+  PhantomPlaintext tmpplain;
+  tmp1 = cipher;
 
-  double inv_of_scale_for_eval = 1.0 / scale_for_eval;
-
-  sin_polynomial.homomorphic_poly_evaluation(ckks, sin_tmp2, sin_tmp1);
-  // cout << "after sin poly, #q = " << cos_tmp2.coeff_modulus_size() << endl;
+  sin_cos_polynomial.homomorphic_poly_evaluation(ckks, tmp2, tmp1);
+  if (inverse_deg == 1)
   {
+    double curr_scale = scale_inverse_coeff;
     for (int i = 0; i < num_double_formula; i++)
     {
-      double_angle_formula(sin_tmp2);
+      curr_scale = curr_scale * curr_scale;
+      double_angle_formula_scaled(tmp2, curr_scale);
     }
-    // cout << "after double angle for cos, #q = " << cos_tmp2.coeff_modulus_size() << endl;
+    rtn = tmp2;
   }
-
-  inverse_sin_polynomial_v1.homomorphic_poly_evaluation(ckks, rtn, sin_tmp2);
-  // inverse_sin_polynomial_v1.homomorphic_poly_evaluation_naive(context, encoder, encryptor, evaluator, relin_keys, sin_rtn, sin_tmp2, decryptor);
-  ckks->evaluator.mod_switch_to_next_inplace(rtn);
-
-  
-  
+  else
+  {
+    for (int i = 0; i < num_double_formula; i++)
+      double_angle_formula(tmp2);
+    inverse_sin_polynomial.homomorphic_poly_evaluation(ckks, rtn, tmp2);
+  }
 }
 void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphertext &cipher)
 {
@@ -420,7 +439,4 @@ void ModularReducer::modular_reduction_relu(PhantomCiphertext &rtn, PhantomCiphe
   ckks->evaluator.rescale_to_next_inplace(sin_rtn);
   sin_rtn.scale() = cos_rtn.scale();
   ckks->evaluator.add(sin_rtn, cos_rtn, rtn);
-
-  
-  
 }
