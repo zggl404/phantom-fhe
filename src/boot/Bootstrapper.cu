@@ -4138,7 +4138,6 @@ void Bootstrapper::slim_sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &c
       for (auto &e : v)
       {
         e *= 2;
-        e *= 1.0276586;
       }
     }
   }
