@@ -48,6 +48,7 @@ class Polynomial {
   void generate_poly_heap();
   void generate_poly_heap_odd();
 
+  void read_heap_from_stream(istream &in);
   void write_heap_to_file(ofstream &out);
   void read_heap_from_file(ifstream &in);
 

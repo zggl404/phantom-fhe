@@ -45,9 +45,7 @@ int main()
 
   int remaining_level = 3+7; // s2c
   int boot_level = 3       // c2s
-                   + 6 + 2 // sin & double angle => sin(2*pi*x)
-                   + 1    // one more double angle => cos(4*pi*x)
-                   + 7;    // arcsin / 2 / pi (?)
+                   + 6 + 2; // sin & double angle => sin(2*pi*x)
   int total_level = remaining_level + boot_level;
 
   vector<int> coeff_bit_vec;

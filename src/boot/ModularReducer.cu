@@ -3,6 +3,28 @@
 #include "boot/PolyUpdate.cuh"
 #include <iomanip>
 
+namespace
+{
+const char *resolve_precomputed_sine_path()
+{
+  static const char *kCandidatePaths[] = {
+      "phantom-fhe/pretrained_parameters/sine.txt",
+      "pretrained_parameters/sine.txt",
+  };
+
+  for (const char *path : kCandidatePaths)
+  {
+    ifstream input(path);
+    if (input.is_open())
+    {
+      return path;
+    }
+  }
+
+  return nullptr;
+}
+} // namespace
+
 ModularReducer::ModularReducer(long _boundary_K, double _log_width, long _deg, long _num_double_formula, long _inverse_deg,
                                CKKSEvaluator *_ckks, bool _use_relu_mode) : boundary_K(_boundary_K), log_width(_log_width), deg(_deg), num_double_formula(_num_double_formula), inverse_deg(_inverse_deg), ckks(_ckks), use_relu_mode(_use_relu_mode)
 {
@@ -36,6 +58,21 @@ void ModularReducer::double_angle_formula_scaled(PhantomCiphertext &cipher, doub
 
 void ModularReducer::generate_sin_cos_polynomial()
 {
+  const char *sine_path = resolve_precomputed_sine_path();
+  
+  
+  if (sine_path != nullptr)
+  {
+    ifstream sin_in(sine_path);
+    boot::Polynomial precomputed_polynomial;
+    precomputed_polynomial.read_heap_from_file(sin_in);
+    if (precomputed_polynomial.deg == deg)
+    {
+      sin_cos_polynomial.copy(precomputed_polynomial);
+      return;
+    }
+  }
+
   poly_generator->generate_optimal_poly(sin_cos_polynomial);
   sin_cos_polynomial.generate_poly_heap();
 }
@@ -365,7 +402,7 @@ void ModularReducer::scaling_for_turn_back_q()
 void ModularReducer::write_polynomials()
 {
   ofstream sin_out("sine.txt"), cos_out("cosine.txt"), inverse_out1("inverse_sine_v1.txt"), inverse_out2("inverse_sine_v2.txt");
-  sin_polynomial.write_heap_to_file(sin_out);
+  sin_cos_polynomial.write_heap_to_file(sin_out);
   cos_polynomial.write_heap_to_file(cos_out);
   inverse_sin_polynomial_v1.write_heap_to_file(inverse_out1);
   // inverse_sin_polynomial_v2.write_heap_to_file(inverse_out2);

@@ -227,7 +227,7 @@ void Polynomial::write_heap_to_file(ofstream &out) {
   }
 }
 
-void Polynomial::read_heap_from_file(ifstream &in) {
+void Polynomial::read_heap_from_stream(istream &in) {
   long index = 0, in_deg;
 
   in >> heaplen;
@@ -248,6 +248,10 @@ void Polynomial::read_heap_from_file(ifstream &in) {
   }
 
   copy(*poly_heap[0]);
+}
+
+void Polynomial::read_heap_from_file(ifstream &in) {
+  read_heap_from_stream(in);
 }
 
 void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphertext &rtn, PhantomCiphertext &cipher) {
