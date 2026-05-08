@@ -106,16 +106,21 @@ void PhantomPublicKey::encrypt_zero_asymmetric_internal(const PhantomContext &co
     cipher.resize(context, chain_index, 2, stream);
 
     auto prev_index = context.get_previous_index(chain_index);
-    if (prev_index == chain_index)
+    size_t size_P = parms.special_modulus_size();
+    auto prev_coeff_mod_size =
+        context.get_context_data(prev_index).parms().coeff_modulus().size();
+    if (prev_index == chain_index || prev_coeff_mod_size != coeff_mod_size + size_P)
     {
-        // Does not require modulus switching
+        // Only the first data level can be reached from the key level by
+        // dropping the special P primes. Lower data levels differ from their
+        // previous level by one ordinary q prime, so using the moddown path
+        // would stride the previous ciphertext incorrectly.
         return encrypt_zero_asymmetric_internal_internal(context, cipher, chain_index, is_ntt_form, stream);
     }
 
     PhantomCiphertext temp_cipher;
     encrypt_zero_asymmetric_internal_internal(context, temp_cipher, prev_index, is_ntt_form, stream);
     // moddown
-    size_t size_P = parms.special_modulus_size();
 
     for (size_t i = 0; i < temp_cipher.size(); i++)
     {
