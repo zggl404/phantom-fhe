@@ -1,0 +1,109 @@
+name: GPU Simulator
+
+# Optional, non-required check. The hosted runners have no GPU, so this builds
+# the CKKS gtest executables and runs a small subset of them on a simulated
+# NVIDIA H100 (https://github.com/pantheongpu/pantheonsim). A simulator cannot
+# reproduce hardware-specific behavior or timing, so it complements the
+# real-GPU tests and does not replace them.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/gpu-sim.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ckks-tests:
+    name: CKKS tests (CUDA 13.0 and simulated H100)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Install NTL and GMP
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libntl-dev libgmp-dev
+
+      - name: Set up the simulated GPU and CUDA toolkit
+        uses: pantheongpu/setup-pantheonsim@deff5781e8adfd83dec98dd5242dcbc96a564773 # v0.1.10
+        with:
+          gpu: nvidia/h100
+          cuda-toolkit: "13.0"
+
+      # 90-virtual embeds PTX only, which the simulator runs (the default
+      # "native" architecture needs a real GPU). The simulator needs a shared
+      # CUDA runtime.
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CUDA_ARCHITECTURES=90-virtual \
+            -DCMAKE_CUDA_RUNTIME_LIBRARY=Shared \
+            -DPHANTOM_BUILD_EXAMPLES=OFF \
+            -DPHANTOM_BUILD_TESTS=ON
+
+      - name: Build
+        run: |
+          cmake --build build -j3 --target \
+            ckks_basic_op ckks_add_op ckks_sub_op ckks_negation_op \
+            ckks_conjugate_op ckks_encryption_op ckks_relin_op \
+            ckks_rescale_op ckks_rotation_op ckks_multi_op
+
+      # Only the poly_modulus_degree 8192 cases run here (ckks_basic_op, and
+      # test cases 2, 6 and 9 of the other files); the 16384 to 65536 cases and
+      # ckks_evaluator_test / ckks_muti_parms are left out to keep the run
+      # short. Test 2 and 9 of ckks_rescale_op and ckks_multi_op are also left
+      # out: they use random inputs and sit close to the tests' 0.01 tolerance,
+      # and on a real RTX 3080 Ti RescaleOperationTest9 (which also throws
+      # "scale out of bounds") and MultiOperationTest2 exceed it too. The job
+      # fails on a simulator error, a missing device, a skipped test or a test
+      # count that does not match.
+      - name: Test
+        run: |
+          set -o pipefail
+          total=0
+          for t in ckks_basic_op ckks_add_op ckks_sub_op ckks_negation_op \
+                   ckks_conjugate_op ckks_encryption_op ckks_relin_op \
+                   ckks_rescale_op ckks_rotation_op ckks_multi_op; do
+            filter='*'
+            expected=3
+            if [ "$t" = ckks_basic_op ]; then
+              expected=5
+            elif [ "$t" = ckks_rescale_op ] || [ "$t" = ckks_multi_op ]; then
+              filter='*Test6'
+              expected=1
+            else
+              filter='*Test2:*Test6:*Test9'
+            fi
+            echo "::group::$t"
+            start=$SECONDS
+            vgpu run "./build/bin/$t" --gtest_filter="$filter" 2>&1 | tee "$t.log"
+            echo "$t: $((SECONDS - start)) s"
+            echo "::endgroup::"
+            if grep -Ei "VirtualGPU error|no CUDA-capable device|no device|\[ +SKIPPED" "$t.log"; then
+              echo "::error::$t hit a simulator error, no device or a skipped test"
+              exit 1
+            fi
+            grep -qE "\[  PASSED  \] $expected tests?\.$" "$t.log" || {
+              echo "::error::$t did not pass exactly $expected tests"
+              exit 1
+            }
+            total=$((total + expected))
+          done
+          echo "$total tests passed"
